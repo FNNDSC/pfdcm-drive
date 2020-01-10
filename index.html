@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+    <title>Driver for pfdcm</title>
+
+    <!-- 3rd Party css -->
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+
+    <!-- 3rd Party js -->
+    <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+
+    <!-- This page css -->
+    <link rel="stylesheet" href="pfdcm-drive.css" type="text/css" />
+
+</head>
+
+<body>
+    <h2 class="formLayout">Interacting with a <tt>pfdcm</tt> server instance</h2>
+
+    <div class="formLayout">
+
+        <div>
+            <!-- Top "navigation" bar -->
+            <button class="button-xsmall button-loginStatus-loggedOut pure-button"     id="loginStatus" onclick="loginStatus_toggle()">login status: unknown</button>
+            <button onclick="jsonSyntaxHightlight_toggle()" class="button-xsmall pure-button pure-button-primary button-jsonHighlight-on" id="JSON_status">JSON syntax highlight: ON</button>
+            <button onclick="useFileDB_toggle()" class="button-xsmall pure-button pure-button-primary button-useFileDB-on" id="useFileDB_status">Use file DB: ON</button>
+            <button onclick="createNewDB_toggle()" class="button-xsmall pure-button pure-button-primary button-createNewDB-off" id="createNewDB_status">Create new DB: OFF</button>
+
+            <div class="pure-control-group">
+                <label>
+                    <button class="button-xsmall pure-button pure-button-primary button-createNewDB-feedsLabel" style="visibility: hidden;" id="createNewDB_feedsLabel">Feeds</button>
+                </label>
+                <input style="width:30px;font-family:courier;font-size:90%;padding-top:0.5em;padding-left:0em;float:left;visibility:hidden;" type="text" maxlength="3" class="onlythree" id="createNewDB_feedsVal" value="4"/>
+            </div>
+
+            <button class="button-xsmall button-help   pure-button"     id="opener">help</button>
+            <br>
+        </div>
+
+        <div id="helpInfo" title="help">
+            <!-- Help screen -->
+            <h3>Interact with <tt>pfdcm</tt></h3>
+            <h4>Start the <tt>pfdcm</tt> service</h4>
+            <p>Make sure that the ChRIS <tt>pfdcm</tt>> service has been started:</p>
+            <p style="text-indent: 2.0em; border-color: #000;"><tt>./ChRIS_WS.py -i &lt;someIP&gt; -p &lt;somePort&gt; --API REST</tt></p>
+            <h4>Start a Web Server in the checkout directory</h4>
+            <p>The best way to run this interaction page is via a server (i.e. do not directly load this page into your browser using the <tt>file:///</tt> directive). Simply start a python web server in the repository check out directory:</p>
+            <p style="text-indent: 2.0em; border-color: #000;"><tt>python -m SimpleHTTPServer [&lt;port&gt;]</tt></p>
+            <p>Now, point your browser at</p>
+            <p style="text-indent: 2.0em; border-color: #000;"><tt>http://&lt;hostIP&gt;[:&lt;port&gt;]</tt></p>
+            <h4>Login</h4>
+            <p>On the top left of the control panel is the login status toggle button. On first run, this should say "login status: logged out". Simply hit the button and wait for the status to change to "logged in". Login never expires, only when you explicitly hit "logout". </p>
+            <h4>DB Permancy</h4>
+            <p>
+                If you wish to have consistency in the data space between calls to the API, you need to store the data DB to disk. Make sure that the "Use file DB" button reads "ON" and is green.
+            </p>
+            <p>
+                Toggle the "Create new DB" button to "ON" if you want to create a new DB. Note, this will overwrite/delete any previous DB tree at that file location.
+            </p>
+            <h4>Call</h4>
+            <p>Once logged in for the first time, or on each time this page is visited, hit the <tt>Call</tt> button to call the current URL (shown in the <i>URLs available</i> select box). With each call of a URL, the contents of this box will change. Simply keep choosing URLs as they are made available to explore the data space.</p>
+            <h4>JSON syntax highlight</h4>
+            <p>By default, the JSON syntax highlight is ON. Hitting the button on the top left will toggle this state. The OFF state is best for viewing error returns from the API because error messages from the python backend run across multiple lines. The syntax highlight ON would show a multi-line return as one long line with a scroll bar.</p>
+            <h4>Operation</h4>
+            <p>For the most, interacting with the ChRIS REST Web Service API requires no "input" from the user, other than perhaps manually specifying the ChRIS web service IP and port.</p>
+            <p>Each call to the ChRIS API returns a description of available URL actions that can be accessed, dependent on the current call. In this manner, software agents can self-discover the data/action space exposed by the ChRIS REST API.</p>
+        </div>
+
+        <form class="pure-form pure-form-aligned">
+            <!-- Dialog for PACS Access -->
+            <fieldset>
+                <legend><tt>pfdcm</tt> Detail</legend>
+
+                <div class="pure-control-group">
+                    <label><tt>pfdcm</tt> IP:port</label>
+                    <input style="width:60px;font-family:courier;" type="text" maxlength="3" class="onlythree" id="IP1" value="127"/>.
+                    <input style="width:60px;font-family:courier;" type="text" maxlength="3" class="onlythree" id="IP2" value="0"/>.
+                    <input style="width:60px;font-family:courier;" type="text" maxlength="3" class="onlythree" id="IP3" value="0"/>.
+                    <input style="width:60px;font-family:courier;" type="text" maxlength="3" class="onlythree" id="IP4" value="1"/>:
+                    <input style="width:70px;font-family:courier;" type="text" id="port" value="5555"/>
+                </div>
+                <div class="pure-control-group">
+                    <label>DB</label>
+                    <input style="width:595px;font-family:courier;" id="DB" name="DB" value="/tmp/ChRIS_DB"><br>
+                </div>
+                <div class="pure-control-group">
+                    <label>PUSH VERB</label>
+                    <select id="VERB" class="pure-input-4-24">
+                        <!--<option>GET</option>-->
+                        <option>POST</option>
+                        <option>PUT</option>
+                        <!--<option>DELETE</option>-->
+                    </select>
+                    <label>API version</label>
+                    <select id="version" class="pure-input-4-24">
+                        <option>v1</option>
+                    </select>
+                    <label>Feed Key</label>
+                    <select id="key" class="pure-input-4-24">
+                        <option>NAME</option>
+                        <option>ID</option>
+                    </select>
+                </div>
+                <div class="pure-control-group">
+                    <label for="URLsFromChRIS">
+                        <button onclick="return REST_call()" style="float: right;" class="pure-button pure-button-primary">PULL</button>
+                    </label>
+                    <select class="pure-input-1-2" id="URLsFromChRIS" style="width:595px;">
+                    </select>
+                </div>
+                <div class="pure-control-group" id="dom_PUSH" style="display:none">
+                </div>
+                <div class="pure-control-group">
+                    <label>AUTH</label>
+                    <input style="width:595px;font-family:courier;" id="AUTH" name="AUTH" value="auth=user=chris,hash=ABCDEF123456789"><br>
+                </div>
+
+                <button onclick="window.location.reload(true)" class="pure-button pure-button-primary button-reset">Reset</button>
+
+            </fieldset>
+        </form>
+    </div>
+    
+    <div class="resultLayout" id="result"></div>
+
+    <div class="modal"><!-- Place at bottom of page --></div>
+    
+    <script src="pfdcm-drive.js"></script>
+
+</body>
+</html>

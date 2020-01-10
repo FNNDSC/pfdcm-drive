@@ -1,0 +1,309 @@
+h3{
+margin:5px;
+}
+
+button{
+float:left;
+}
+
+h2:hover .overlay {
+display:block;
+background-color:white;
+opacity:0.75;
+}
+
+.formLayout
+{
+background-color: #f3f3f3;
+border: solid 1px #a1a1a1;
+padding: 10px;
+width: 940px;
+margin-left: auto;
+margin-right:auto;
+}
+
+.resultLayout
+{
+padding: 10px;
+width: 880px;
+margin-left: auto;
+margin-right:auto;
+}
+
+.push_wrapper
+{
+margin:0 auto;
+overflow:hidden;
+}
+
+.push_wrapper>div{
+display:inline-block;
+vertical-align:middle;
+width:49%;
+}
+
+.left{
+float:left;
+}
+
+.right{
+float:right;
+}
+
+pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
+.string     { font-family:courier; color: green; }
+.number     { font-family:courier; color: darkorange; }
+.boolean    { font-family:courier; color: blue; }
+.null       { font-family:courier; color: magenta; }
+.key        { font-family:courier; color: red; }
+
+.input {
+font-family: courier;
+}
+
+.formLayout label
+{
+text-align: right;
+padding-right: 20px;
+}
+
+br
+{
+clear: left;
+}
+
+.onlythree {     
+width: 50px;    
+border: 0;    
+}    
+
+.modal {
+display:    none;
+position:   fixed;
+z-index:    1000;
+top:        0;
+left:       0;
+height:     100%;
+width:      100%;
+background: rgba( 255, 255, 255, .8 )
+url('http://i.stack.imgur.com/FhHRx.gif')
+50% 50%
+no-repeat;
+}
+
+/* When the body has the loading class, we turn
+the scrollbar off with overflow:hidden */
+body.loading {
+overflow: hidden;
+}
+
+/* Anytime the body has the loading class, our
+modal element will be visible */
+body.loading .modal {
+display: block;
+}
+
+.ui-widget.helpInfo-dialog {
+font-family:    Verdana,Arial,sans-serif;
+font-size:      .8em;
+}
+
+.ui-widget-content.helpInfo-dialog {
+background:     #F9F9F9;
+border:         1px solid #90d93f;
+color:          #222222;
+}
+
+.ui-dialog.helpInfo-dialog {
+left:           0;
+outline:        0 none;
+padding:        0 !important;
+position:       absolute;
+top:            0;
+}
+
+.ui-dialog.helpInfo-dialog .ui-dialog-content {
+background:     none repeat scroll 0 0 transparent;
+border:         0 none;
+overflow:       auto;
+position:       relative;
+padding:        20;
+margin:         0;
+}
+
+.ui-dialog.helpInfo-dialog .ui-widget-header {
+background:     #b0de78;
+border:         0;
+color:          #fff;
+font-weight:    normal;
+}
+
+.ui-dialog.helpInfo-dialog .ui-dialog-titlebar {
+padding:        0.1em .5em;
+position:       relative;
+font-size:      1em;
+}
+
+.button-xsmall {
+    font-size: 70%;
+}
+
+.button-loginStatus-loggedIn,
+.button-loginStatus-loggedOut,
+.button-help {
+    color: white;
+    /*border-radius: 4px;*/
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.button-login {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-logout {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-loginStatus-loggedOut {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-loginStatus-loggedIn {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-jsonHighlight-on {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-jsonHighlight-off {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-useFileDB-on {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-useFileDB-off {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-createNewDB-on {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-createNewDB-off {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-createNewDB-feedsLabel {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+
+.button-REST-delete {
+    background: rgb(223, 27, 15); /* this is an orange */
+}
+
+.button-REST-run {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-REST-clear {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-help {
+    background: rgb(66, 184, 221); /* this is a light blue */
+    float: right;
+}
+
+.button-reset {
+    background: rgb(223, 117, 20); /* this is an orange */
+    display: inline-block;
+    position: relative;
+    left: 45%;
+    /*float: right;*/
+}
+
+.button-xsmall {
+    font-size: 70%;
+}
+
+.button-loginStatus-loggedIn,
+.button-loginStatus-loggedOut,
+.button-help {
+    color: white;
+    /*border-radius: 4px;*/
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.button-login {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-logout {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-loginStatus-loggedOut {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-loginStatus-loggedIn {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-jsonHighlight-on {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-jsonHighlight-off {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-useFileDB-on {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-useFileDB-off {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-createNewDB-on {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-createNewDB-off {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-createNewDB-feedsLabel {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+
+.button-REST-delete {
+    background: rgb(223, 27, 15); /* this is an orange */
+}
+
+.button-REST-run {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-REST-clear {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-help {
+    background: rgb(66, 184, 221); /* this is a light blue */
+    float: right;
+}
+
+.button-reset {
+    background: rgb(223, 117, 20); /* this is an orange */
+    display: inline-block;
+    position: relative;
+    left: 45%;
+    /*float: right;*/
+}
