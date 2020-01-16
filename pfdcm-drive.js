@@ -186,9 +186,32 @@ function logout() {
     b_URLsBuild = false;
 }
 
+function URLargsParse() {
+    const   str_query           = window.location.search
+    const   urlParams           = new URLSearchParams(str_query)
+
+    var l_DOM = [   
+                    "pfdcm_IP", 
+                    "pfdcm_port", 
+                    "PACS_IP", 
+                    "PACS_port", 
+                    "PACS_AET", 
+                    "PACS_AEC", 
+                    "PACS_AETL"
+                ]
+
+    l_DOM.forEach(el => {
+        if(urlParams.has(el)) {
+            $('#'+el).val(urlParams.get(el));
+        }
+    })
+}
+
 window.onload = function() {
     loginStatus_fileTagGenerate();
     loginStatus_show(file_exist(str_loginURLtag));
+
+    URLargsParse();
 };
 
 
@@ -409,25 +432,53 @@ function API_assemblePrefix() {
     */
 
     // Assemble the service address and port:
+    var pfdcm_IP    = $('#pfdcm_IP').val()
+    var pfdcm_port  = $('#pfdcm_port').val()
     var IP1	= $('#IP1').val();
     var IP2	= $('#IP2').val();
     var IP3	= $('#IP3').val();
     var IP4	= $('#IP4').val();
-    var str_hostIP  = "http://" + IP1 + "." + IP2 + "." + IP3 + "." + IP4;
-    var str_FQhost  = str_hostIP + ":" + $("#port").val();
+    var str_hostIP  = "http://" + pfdcm_IP;
+    var str_FQhost  = str_hostIP + ":" + pfdcm_port;
 
     return(str_FQhost);
 
 }
 
+function API_msgAssemble(str_assembly, d_APICall) {
+    /*
+        Based on the <str_assembly>, creates one of several pre-canned
+        JSON messages.
+    */
+   d_msg = {}
+   switch(str_assembly) {
+        case 'allGet': d_APICall['tx'] = {
+                'payload': {
+                    'action': 'internalctl',
+                    'meta': {
+                        'var':  '/',
+                        'get':  'value'
+                    }
+                }
+            }
+       break;
+   }
+}
+
 function API_assembleCore(d_APIcall) {
     /*
-    Assembles the main URL call from various subcomponents.
-        */
+        Assembles the main URL call from various subcomponents.
+    */
     var debug           = new C_debug();
     debug.functionName  = "API_assembleCore";
     debug.entering();
     debug.vlog({message: 'd_APIcall', var: d_APIcall});
+
+    d_JSONtoSend = {
+        'payload': {
+
+        }
+    }
 
     if( typeof(d_APIcall['APIcallOverride'])==='undefined' || typeof(d_APIcall['URL']) === 'string') {
         str_URLsFromChRIS_selected  = URLsFromChRIS_DOM.val();
@@ -622,9 +673,8 @@ function REST_call(d_APIcall) {
 
         ARGS
 
-            d_APICall           dictionary
-
-            if not passed, will default to GET and void override
+            d_APICall           context-specific dictionary defining some
+                                operational behavior
 
         */
     var debug           = new C_debug();

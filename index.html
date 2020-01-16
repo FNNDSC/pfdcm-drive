@@ -45,8 +45,14 @@
             <!-- Help screen -->
             <h3>Interact with <tt>pfdcm</tt></h3>
             <h4>Start the <tt>pfdcm</tt> service</h4>
-            <p>Make sure that the ChRIS <tt>pfdcm</tt>> service has been started:</p>
-            <p style="text-indent: 2.0em; border-color: #000;"><tt>./ChRIS_WS.py -i &lt;someIP&gt; -p &lt;somePort&gt; --API REST</tt></p>
+            <p>Make sure that the ChRIS <tt>pfdcm</tt> service has been started. The simplest way to do this is to pull the source repo from <tt>github</tt> and run the <tt>make</tt> shell script:</p>
+            <p style="text-indent: 2.0em; border-color: #000;"><tt>cd ~/somwhere</tt></p>
+            <p style="text-indent: 2.0em; border-color: #000;"><tt>git clone https://github.com/FNNDSC/pfdcm</tt></p>
+            <p style="text-indent: 2.0em; border-color: #000;"><tt>cd pfdcm</tt></p>
+            <p style="text-indent: 2.0em; border-color: #000;"><tt>make</tt></p>
+            <p>
+                Note the above assumes that you have <tt>docker</tt> and <tt>docker-compose</tt> installed, and ideally speaking, that your userID on your local system can do <tt>sudo</tt>-less <tt>docker</tt> commands.
+            </p>
             <h4>Start a Web Server in the checkout directory</h4>
             <p>The best way to run this interaction page is via a server (i.e. do not directly load this page into your browser using the <tt>file:///</tt> directive). Simply start a python web server in the repository check out directory:</p>
             <p style="text-indent: 2.0em; border-color: #000;"><tt>python -m SimpleHTTPServer [&lt;port&gt;]</tt></p>
@@ -73,53 +79,51 @@
         <form class="pure-form pure-form-aligned">
             <!-- Dialog for PACS Access -->
             <fieldset>
-                <legend><tt>pfdcm</tt> Detail</legend>
 
-                <div class="pure-control-group">
-                    <label><tt>pfdcm</tt> IP:port</label>
-                    <input style="width:60px;font-family:courier;" type="text" maxlength="3" class="onlythree" id="IP1" value="127"/>.
-                    <input style="width:60px;font-family:courier;" type="text" maxlength="3" class="onlythree" id="IP2" value="0"/>.
-                    <input style="width:60px;font-family:courier;" type="text" maxlength="3" class="onlythree" id="IP3" value="0"/>.
-                    <input style="width:60px;font-family:courier;" type="text" maxlength="3" class="onlythree" id="IP4" value="1"/>:
-                    <input style="width:70px;font-family:courier;" type="text" id="port" value="5555"/>
-                </div>
-                <div class="pure-control-group">
-                    <label>DB</label>
-                    <input style="width:595px;font-family:courier;" id="DB" name="DB" value="/tmp/ChRIS_DB"><br>
-                </div>
-                <div class="pure-control-group">
-                    <label>PUSH VERB</label>
-                    <select id="VERB" class="pure-input-4-24">
-                        <!--<option>GET</option>-->
-                        <option>POST</option>
-                        <option>PUT</option>
-                        <!--<option>DELETE</option>-->
-                    </select>
-                    <label>API version</label>
-                    <select id="version" class="pure-input-4-24">
-                        <option>v1</option>
-                    </select>
-                    <label>Feed Key</label>
-                    <select id="key" class="pure-input-4-24">
-                        <option>NAME</option>
-                        <option>ID</option>
-                    </select>
-                </div>
-                <div class="pure-control-group">
-                    <label for="URLsFromChRIS">
-                        <button onclick="return REST_call()" style="float: right;" class="pure-button pure-button-primary">PULL</button>
-                    </label>
-                    <select class="pure-input-1-2" id="URLsFromChRIS" style="width:595px;">
-                    </select>
-                </div>
-                <div class="pure-control-group" id="dom_PUSH" style="display:none">
-                </div>
-                <div class="pure-control-group">
-                    <label>AUTH</label>
-                    <input style="width:595px;font-family:courier;" id="AUTH" name="AUTH" value="auth=user=chris,hash=ABCDEF123456789"><br>
+                <div style="border:0px inset grey; padding: 5px;">
+                    <legend><tt>pfdcm</tt> Detail</legend>
+                    <div class="pure-control-group">
+                        <label>IP:port</label>
+                        <input style="width:525px;font-family:courier;" id="pfdcm_IP" name="pfdcm_IP" value=""/>:
+                        <input style="width:70px;font-family:courier;" type="text" id="pfdcm_port" value="5555"/>
+                    </div>
+                    <div class="pure-control-group">
+                        <label>
+                            <button onclick="return REST_call({'operation': 'pfdcm_detailGet'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">GET DETAIL</button>
+                        </label>
+                    </div>
                 </div>
 
-                <button onclick="window.location.reload(true)" class="pure-button pure-button-primary button-reset">Reset</button>
+                <div style="border:0px groove grey; padding: 5px;">
+                    <legend>PACS Detail</legend>
+                    <div class="pure-control-group">
+                        <label>IP:port</label>
+                        <input style="width:525px;font-family:courier;" id="PACS_IP" name="PACS_IP" value=""/>:
+                        <input style="width:70px;font-family:courier;" type="text" id="PACS_port" value="5555"/>
+                    </div>
+                    <div class="pure-control-group">
+                        <label>AETitle</label>
+                        <input style="width:225px;font-family:courier;" id="PACS_AET" name="PACS_AET" value=""/>
+                        <label>Called AETitle</label>
+                        <input style="width:225px;font-family:courier;" id="PACS_AEC" name="PACS_AEC" value=""/>
+                        <!-- <label>AETitle listener</label>
+                        <input style="width:125px;font-family:courier;" id="PACS_AETL" name="PACS_AETL" value=""/> -->
+                    </div>
+                    <div class="pure-control-group">
+                        <label for="URLsFromChRIS">
+                            <button onclick="return REST_call({'operation': 'pacs_set'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">SET PACS</button>
+                        </label>
+                        <!-- <select class="pure-input-1-2" id="URLsFromChRIS" style="width:595px;">
+                        </select> -->
+                    </div>
+                </div>
+
+                <div style="border:0px groove grey; padding: 5px;">
+                    <legend>PACS Detail</legend>
+                </div>
+
+                <button onclick="window.location.reload(true)" 
+                class="pure-button pure-button-primary button-reset">Reset</button>
 
             </fieldset>
         </form>
