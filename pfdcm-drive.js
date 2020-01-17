@@ -1,6 +1,203 @@
+/////////
+///////////////////////////
+///////// Object prototypes 
+///////////////////////////
+/////////
+
+
+/////////
+///////// DOM object
+/////////
+/*
+    This object provides a convenient abstraction
+    for accessing named components of the DOM, removing
+    the very tight coupling that might occur by referening
+    DOM literals.
+*/
+
+function DOM(al_keylist) {
+    this.l_DOM = al_keylist;
+}
+
+DOM.prototype = {
+    constructor:    DOM,
+
+    elements:   function() {
+        return this.l_DOM;
+    },
+
+    get:    function(str_key) {
+        if(this.l_DOM.includes(str_key)) {
+            return $('#'+str_key).val()
+        } else {
+            return None;
+        }
+    },
+
+    set:    function(str_key, str_val) {
+        if(this.l_DOM.includes(str_key)) {
+            $('#'+str_key).val(str_val)
+            return $('#'+str_key).val();
+        } else {
+            return None;
+        }
+    }
+}
+
+/////////
+///////// URL object
+/////////
+/*
+    This object parses the URL for parameters to set in the 
+    dashboard.
+*/
+
+function URL(dom) {
+    this.dom        = dom;
+    this.str_query  = window.location.search;
+    this.urlParams  =  new URLSearchParams(this.str_query);
+}
+
+URL.prototype = {
+    constructor:    URL,
+
+    parse:          function() {
+        this.dom.elements().forEach(el => {
+            if(this.urlParams.has(el)) {
+                this.dom.set(el, this.urlParams.get(el));
+            }
+        })
+    }
+}
+
+/////////
+///////// MSG object
+/////////
+/*
+    This object generates messages to send to the remote 
+    `pfdcm` server
+*/
+
+function MSG(astr_VERB) {
+    this.str_path   = '/api/vi/cmd/';
+    this.scheme     = 'http';
+    this.RESTverb   = astr_VERB;
+    this.payload    = None;
+}
+
+MSG.prototype = {
+    constructor:    MSG,
+
+    APIschemeAuthPath_build:    function() {
+        /*
+        Return the first part of the API call, typically the
+        http://<host>[:<IP>][/path]
+        */
+        return(this.scheme                 + 
+               '://'                       +
+               DOMurl.get('pfdcm_IP')      +
+               ':'                         +
+               DOMurl.get('pfdcm_port')    +
+               this.str_path);
+    },
+
+    hello:                      function() {
+        /*
+        Return the JSON payload for a 'hello' message.
+        */    
+        return( {
+           'payload': {
+               'action':    'hello',
+               'meta':      {
+                   'askAbout':  'sysinfo',
+                   'echoBack':  'greetings'
+               }
+           }
+       });    
+    }
+}
+
+/////////
+///////// REST calling object
+/////////
+/*
+    This object handles the actual calling out (and handling success/failure)
+    to the `pfdcm` service
+*/
+
+function REST(astr_VERB) {
+    this.MSG        = new MSG(astr_VERB);
+}
+
+REST.prototype = {
+    constructor:    REST,
+
+    callback_AJAX_error:    function(xhdr, textStatus, thrownError) {
+        hdr                 = null;
+        console.log('Some error was triggered.');
+        console.log('textStatus         = ' +  textStatus);
+        console.log('xhdr.statusText    = ' +  xhdr.statusText);
+        console.log('xhdr.responseText  = ' +  xhdr.responseText);
+        console.log('xhdr.status        = ' +  xhdr.status);
+        console.log('thrownError        = ' +  thrownError);
+        var str = JSON.stringify(xhdr.responseText, null, 2);
+        output(syntaxHighlight(xhdr.status));
+        hdr=xhdr;
+    },
+
+    hello:                  function() {
+        /*
+        Say hello to pfdcm
+        */
+       str_schemeAuthPath   = this.MSG.APIschemeAuthPath_build();
+       d_helloPayload       = this.MSG.hello()
+    },
+
+    call:                   function() {
+        $.ajax({
+            type:           this.MSG.RESTverb,
+            url:            APIcall,
+            crossDomain:    true,
+            dataType:       'json',
+            data:           d_APIcall['data'],
+            beforeSend:     callback_AJAX_beforeSend,
+            complete:       function() {
+                callback_AJAX_complete(json_ChRISresp, d_APIcall);
+            },
+            success:        function(ChRISresp) {
+                            callback_AJAX_success(ChRISresp, d_APIcall);
+            },
+            error:          callback_AJAX_error
+        });
+    
+    },
+
+    
+
+}
+
+
+
+
+
 // ---------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------
 // Some "global" variables.
+
+l_urlParams = [   
+    "pfdcm_IP", 
+    "pfdcm_port", 
+    "PACS_IP", 
+    "PACS_port", 
+    "PACS_AET", 
+    "PACS_AEC", 
+    "PACS_AETL",
+    "PACS_name"
+];
+DOMurl      = new DOM(l_urlParams);
+
+url         = new URL(DOMurl);
+
 
 // The whole document
 $body                       = $("body");
@@ -32,7 +229,6 @@ functionCallDepth           = 0;
 // ---------------------------------------------------------------------------------------------------------------
 
 
-
 $(document).on({
     ajaxStart:  function() { $body.addClass("loading");  output(APIcall);  },
     ajaxStop:   function() { $body.removeClass("loading"); }
@@ -44,6 +240,7 @@ $( "#helpInfo" ).dialog({
     width:          500,
     dialogClass:    'helpInfo-dialog'
 });
+
 $( "#opener" ).click(function() {
     $( "#helpInfo" ).dialog( "open" );
 });
@@ -186,32 +383,14 @@ function logout() {
     b_URLsBuild = false;
 }
 
-function URLargsParse() {
-    const   str_query           = window.location.search
-    const   urlParams           = new URLSearchParams(str_query)
 
-    var l_DOM = [   
-                    "pfdcm_IP", 
-                    "pfdcm_port", 
-                    "PACS_IP", 
-                    "PACS_port", 
-                    "PACS_AET", 
-                    "PACS_AEC", 
-                    "PACS_AETL"
-                ]
-
-    l_DOM.forEach(el => {
-        if(urlParams.has(el)) {
-            $('#'+el).val(urlParams.get(el));
-        }
-    })
-}
 
 window.onload = function() {
     loginStatus_fileTagGenerate();
     loginStatus_show(file_exist(str_loginURLtag));
 
-    URLargsParse();
+    // Parse the URL and populate relevant elements on the page
+    url.parse();
 };
 
 
