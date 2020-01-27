@@ -4,6 +4,108 @@
 ///////////////////////////
 /////////
 
+/////////
+///////// Debug object
+/////////
+/*
+    This object provides a simple tool for simple debugging --
+    mostly entering and exiting functions, printing some 
+    state, etc.
+*/
+
+function Debug(d) {
+    /*
+    Print some debugging info to console.
+
+    d.functionName      string      name of function
+    d.message           string      message
+    d.var               var         variable to print
+
+    */
+
+    this.functionName   = '<void>';
+    this.message        = '<void>';
+    this.var            = null;
+    this.tab            = 0;
+
+    if (d.constructor == Object) {
+        prototype.argcheck(d)
+    }
+
+    if(typeof(d) === 'string' || d instanceof String) {
+        this.functionName   = d
+    }
+
+}
+
+Debug.prototype = {
+
+    constructor:    Debug,
+
+    argcheck:       function (d) {
+        if (typeof (d.functionName) != 'undefined')
+            this.functionName = d.functionName;
+        if (typeof (d.message) != 'undefined')
+            this.message = d.message;
+        if (typeof (d.var) != 'undefined')
+            this.var = d.var;
+    },
+
+    cl:             function () {
+        console.log(' ');
+    },
+
+    indent:         function () {
+        str_indent = '';
+        for (i = 0; i < this.tab; i++)
+            str_indent = str_indent + '\t';
+        return str_indent;
+    },
+
+    entering:       function () {
+        functionCallDepth += 1;
+        this.tab = functionCallDepth;
+        console.log(
+            this.indent()           + 
+            '--------> Entering '   + 
+            this.functionName       + 
+            '...');
+    },
+
+    leaving:        function () {
+        console.log(
+            this.indent()       + 
+            'Leaving '          + 
+            this.functionName   + 
+            ' --------> ');
+        functionCallDepth -= 1;
+    },
+
+    vlog:           function (d) {
+        this.argcheck(d);
+        if (typeof (this.var) === 'object') {
+            console.log(
+                this.indent()               + 
+                'In ' + this.functionName   + 
+                ': ' + d.message + ' = '
+            );
+            console.log(d.var);
+        } else
+            console.log(
+                this.indent()               + 
+                'In ' + this.functionName   + 
+                ': ' + d.message    + ' = ' + d.var);
+    },
+
+    log:            function (d) {
+        this.argcheck(d);
+        console.log(
+                this.indent()               + 
+                'In ' + this.functionName + ': ' + d.message);
+    }
+
+}
+
 
 /////////
 ///////// DOM object
@@ -30,7 +132,7 @@ DOM.prototype = {
         if(this.l_DOM.includes(str_key)) {
             return $('#'+str_key).val()
         } else {
-            return None;
+            return null;
         }
     },
 
@@ -39,7 +141,7 @@ DOM.prototype = {
             $('#'+str_key).val(str_val)
             return $('#'+str_key).val();
         } else {
-            return None;
+            return null;
         }
     }
 }
@@ -78,11 +180,18 @@ URL.prototype = {
     `pfdcm` server
 */
 
-function MSG(astr_VERB) {
-    this.str_path   = '/api/vi/cmd/';
-    this.scheme     = 'http';
-    this.RESTverb   = astr_VERB;
-    this.payload    = None;
+function MSG(d_comms) {
+    // parameters governing the message comms in general
+    this.d_comms            = d_comms;
+
+    // this.str_VERB           = d_comms['VERB'];
+    // this.scheme             = d_comms['scheme'];
+    // this.str_path           = d_comms['path'];
+    // this.type               = d_comms['type'];
+
+    // info on this *specific* message
+    this.payload            = '';
+    this.str_schemeAuthPath = '';
 }
 
 MSG.prototype = {
@@ -93,92 +202,298 @@ MSG.prototype = {
         Return the first part of the API call, typically the
         http://<host>[:<IP>][/path]
         */
-        return(this.scheme                 + 
-               '://'                       +
-               DOMurl.get('pfdcm_IP')      +
-               ':'                         +
-               DOMurl.get('pfdcm_port')    +
-               this.str_path);
+        return(this.d_comms['scheme']       + 
+               '://'                        +
+               DOMurl.get('pfdcm_IP')       +
+               ':'                          +
+               DOMurl.get('pfdcm_port')     +
+               this.d_comms['path']);
     },
 
     hello:                      function() {
         /*
         Return the JSON payload for a 'hello' message.
-        */    
-        return( {
-           'payload': {
-               'action':    'hello',
-               'meta':      {
-                   'askAbout':  'sysinfo',
-                   'echoBack':  'greetings'
-               }
-           }
-       });    
+        */
+
+        // Build the schemeAuthPath at message compose since
+        // DOM elements might have changed asynchronously.
+        this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
+        d_meta  = {
+            "askAbout": "sysinfo",
+            "echoBack": "greetings"
+        };
+        d_msg = {
+            "action": "hello",
+            "meta": {
+                "askAbout": "sysinfo",
+                "echoBack": "greetings"
+            }
+        };   
+        return(d_msg);    
     }
 }
 
 /////////
 ///////// REST calling object
 /////////
-/*
-    This object handles the actual calling out (and handling success/failure)
-    to the `pfdcm` service
-*/
 
-function REST(astr_VERB) {
-    this.MSG        = new MSG(astr_VERB);
+function AJAX(Msg) {
+    this.help = `
+        The AJAX object specifies communication basics using
+        the jQuery $.ajax(...) mechanism. 
+
+        The design pattern normalizes usage between the two
+        backend infrastructure engines, the AJAX and Fetch.
+    `;
+    this.SRVresp        = null;
+    this.json_SRVresp   = null;
+    this.TX             = Msg;
+}
+
+AJAX.prototype = {
+    constructor:    AJAX,
+
+    onError_callBack:       function (xhdr, textStatus, thrownError) {
+        hdr = null;
+        console.log('Some error was triggered.');
+        console.log('textStatus         = ' + textStatus);
+        console.log('xhdr.statusText    = ' + xhdr.statusText);
+        console.log('xhdr.responseText  = ' + xhdr.responseText);
+        console.log('xhdr.status        = ' + xhdr.status);
+        console.log('thrownError        = ' + thrownError);
+        var str = JSON.stringify(xhdr.responseText, null, 2);
+        output(syntaxHighlight(xhdr.status));
+        hdr = xhdr;
+    },
+
+    onBefore_callBack:      function () {
+        var debug = new Debug("AJAX.onBefore_callback");
+        debug.entering();
+        debug.leaving();
+    },
+
+    onComplete_callBack:    function (jqXHR, textStatus) {
+        var debug = new Debug("AJAX.onComplete_callBack");
+        debug.entering();
+        debug.leaving();
+    },
+
+    onSuccess_callBack:     function (SRVresp, textStatus, jqXHR) {
+        /*
+            This is an asynchronous function, so when a button in UI
+            is hit triggering a REST call, internal state is not 
+            updated until this function is called.
+        */
+
+        var debug = new Debug("AJAX.onSuccess_callback");
+        debug.entering();
+
+        debug.vlog({ 'message': 'SRVresp', var: SRVresp });
+
+        debug.leaving();
+    },
+
+    call: function (payload) {
+        $.ajax({
+            type:           this.TX.d_comms['VERB'],
+            url:            this.TX.str_schemeAuthPath,
+            crossDomain:    true,
+            dataType:       this.TX.d_comms['type'],
+            data:           payload,
+            async:          false,
+            beforeSend:     this.onBefore_callBack,
+            complete:       this.onComplete_callBack,
+            success:        this.onSuccess_callBack,
+            error:          this.onError_callBack   
+        })
+    },
+}
+
+function Fetch(Msg) {
+    this.help = `
+        The Fetch object specifies communication basics using
+        the fetch(...) mechanism. 
+
+        The passed Msg object contains the payload and comms
+        parameters for transmission (hence TX), while returned
+        data is captured in the Fetch object itself.
+    `;
+    this.SRVresp        = null;
+    this.json_SRVresp   = null;
+    this.TX             = Msg;
+    this.fetchRetries   = 5;
+}
+
+Fetch.prototype = {
+    constructor: Fetch,
+
+    postData: async function (url = '', data = {}) {
+        /*
+        Note that "weird" behaviour in comms is most often
+        linked to parameter settings below. For example, sending
+        any 'headers' seems to trigger an OPTIONS verb in the
+        server irrespective of the 'method' value.
+        */
+
+        // Default options are marked with *
+        const response = await fetch(url, {
+            method:         this.TX.d_comms['VERB'],    // *GET, POST, PUT, DELETE, etc.
+            mode:           'cors',                     // no-cors, *cors, same-origin
+            cache:          'no-cache',                 // *default, no-cache, reload, force-cache, only-if-cached
+            credentials:    'same-origin',              // include, *same-origin, omit
+            // headers: {
+            //     // 'Content-Type': 'application/json'
+            //     // 'Content-Type': 'application/x-www-form-urlencoded',
+            // },
+            redirect:       'follow',                   // manual, *follow, error
+            referrerPolicy: 'no-referrer',              // no-referrer, *client
+            // body data type must match "Content-Type" header
+            body: JSON.stringify(data)
+        });
+        // return await response.json(); // parses JSON response into native JavaScript objects
+        return await response.text(); // parses JSON response into native JavaScript objects
+    },
+
+    handleErrorsInResponse: function (response) {
+        var debug = new Debug("Fetch.handleErrorsInResponse");
+        debug.entering();
+        // Some parsing on 'reponse' for an error condition,
+        // possibly reponse.ok if a Response object is passed
+        // if (!response.ok) {
+        //     throw Error(response.statusText);
+        // }
+        debug.leaving();
+        return response;
+    },
+
+    handleReponse: function (response) {
+        var debug = new Debug("Fetch.handleResponse");
+        debug.entering();
+
+        console.log(response);
+
+        debug.leaving();
+    },
+
+    handleErrorsInFetch: function (response) {
+        var debug = new Debug("Fetch.handleErrorsInFetch");
+        debug.entering();
+        // Some parsing on 'reponse' for an error condition,
+        // possibly reponse.ok if a Response object is passed
+        // if (!response.ok) {
+        //     throw Error(response.statusText);
+        // }
+        debug.vlog({ 'message': '\nresponse', var: response });
+        debug.leaving();
+        return response;
+    },
+
+    sleep:          function(milliseconds) {
+        return new Promise(resolve => setTimeout(resolve, milliseconds))
+    },
+
+    fetch_retry:    async (url, options, n) => {
+        try {
+            await sleep(500);
+            return await fetch(url, options)
+        } catch (err) {
+            if (n === 1) throw err;
+            return await this.fetch_retry(url, options, n - 1);
+        }
+    },
+
+    // call:           function(payload) {
+    //     options = {
+    //         method:         this.TX.d_comms['VERB'],    // *GET, POST, PUT, DELETE, etc.
+    //         mode:           'cors',                     // no-cors, *cors, same-origin
+    //         cache:          'no-cache',                 // *default, no-cache, reload, force-cache, only-if-cached
+    //         credentials:    'same-origin',              // include, *same-origin, omit
+    //         redirect:       'follow',                   // manual, *follow, error
+    //         referrerPolicy: 'no-referrer',              // no-referrer, *client
+    //         // body data type must match "Content-Type" header
+    //         body: JSON.stringify(payload)
+    //     };
+    //     url     = this.TX.str_schemeAuthPath;
+    //     n       = 4;
+    //     SRVresp = this.fetch_retry(url, options, n);
+    // },
+
+    call: function (payload) {
+        this.postData(
+            this.TX.str_schemeAuthPath,
+            payload)
+        .then(this.sleep(500))
+        .then(this.handleErrorsInResponse)
+        .then(this.handleReponse)
+        .catch(this.handleErrorsInFetch);
+    },
+
+}
+
+/////////
+///////// REST calling object
+/////////
+
+function REST(d_comms) {
+    this.help = `
+        The REST object handles communication with a server
+        process.
+
+        One of two core backends are available, specified
+        by the 'commsBackend' passed in the <d_comms>
+        dictionary:
+
+            'fetch':        Uses the new fetch() API, which
+                            is cleaner and preserves nested
+                            JSON dictionaries transmitted
+                            to server. This is the preferred
+                            method.
+
+            'ajax':         Uses the jQuery $.ajax() infrastructure
+                            and provided more for historical
+                            purposes. Note this method
+                            flattens transmitted JSON
+                            dictionaries.
+    `;
+    // The msg contains all data necessary for comms:
+    //      remote address, payload, header info etc.
+    this.msg                = new MSG(d_comms);
+    this.SRVresp            = null;     // Raw reponse
+    this.json_SRVresp       = null;     // JSONified response
+
+    switch(d_comms['clientAPI']) {
+        case 'Fetch':   
+            this.clientAPI  = new Fetch(this.msg);
+            break;
+        case 'Ajax':
+            this.clientAPI  = new AJAX(this.msg)
+            break;
+    }
 }
 
 REST.prototype = {
     constructor:    REST,
 
-    callback_AJAX_error:    function(xhdr, textStatus, thrownError) {
-        hdr                 = null;
-        console.log('Some error was triggered.');
-        console.log('textStatus         = ' +  textStatus);
-        console.log('xhdr.statusText    = ' +  xhdr.statusText);
-        console.log('xhdr.responseText  = ' +  xhdr.responseText);
-        console.log('xhdr.status        = ' +  xhdr.status);
-        console.log('thrownError        = ' +  thrownError);
-        var str = JSON.stringify(xhdr.responseText, null, 2);
-        output(syntaxHighlight(xhdr.status));
-        hdr=xhdr;
-    },
-
     hello:                  function() {
         /*
         Say hello to pfdcm
         */
-       str_schemeAuthPath   = this.MSG.APIschemeAuthPath_build();
-       d_helloPayload       = this.MSG.hello()
+        this.call(this.msg.hello());
     },
 
-    call:                   function() {
-        $.ajax({
-            type:           this.MSG.RESTverb,
-            url:            APIcall,
-            crossDomain:    true,
-            dataType:       'json',
-            data:           d_APIcall['data'],
-            beforeSend:     callback_AJAX_beforeSend,
-            complete:       function() {
-                callback_AJAX_complete(json_ChRISresp, d_APIcall);
-            },
-            success:        function(ChRISresp) {
-                            callback_AJAX_success(ChRISresp, d_APIcall);
-            },
-            error:          callback_AJAX_error
-        });
-    
+    do:                     function(d_op) {
+        if('operation' in d_op) {
+            switch(d_op['operation']) {
+                case 'hello':   this.hello();
+            }
+        }
     },
 
-    
+    call:                   function(payload) {
+        this.clientAPI.call(payload);
+    },
 
 }
-
-
-
-
 
 // ---------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------
@@ -194,9 +509,16 @@ l_urlParams = [
     "PACS_AETL",
     "PACS_name"
 ];
-DOMurl      = new DOM(l_urlParams);
 
+DOMurl      = new DOM(l_urlParams);
 url         = new URL(DOMurl);
+post        = new REST( {
+                            'VERB':         'POST',
+                            'type':         'text',
+                            'scheme':       'http',
+                            'path':         '/api/v1/cmd/',
+                            'clientAPI':    'Fetch'
+                        })
 
 
 // The whole document
@@ -212,7 +534,7 @@ d_URLsFromChRIS             = null;
 key_DOM                     = $('#key');
 // API call return strings
 APIcall                     = '';
-json_ChRISresp              = '';
+json_SRVresp              = '';
 // Some default/persistent URL select options.
 str_pathUp                  = '';
 str_allFeedsBase            = '';
@@ -406,7 +728,7 @@ function sort_unique(arr) {
     return ret;
 }
 
-function URLsFromChRIS_build(json_ChRISresp, a_URLsFromChRIS) {
+function URLsFromChRIS_build(json_SRVresp, a_URLsFromChRIS) {
     /*
     This function parses the URL component of the response to
     build a list of possible navigable links from this
@@ -417,7 +739,7 @@ function URLsFromChRIS_build(json_ChRISresp, a_URLsFromChRIS) {
 
     ARGS
 
-        json_ChRISresp      json object the reponse from ChRIS
+        json_SRVresp      json object the reponse from ChRIS
 
     OPTIONAL
 
@@ -433,13 +755,13 @@ function URLsFromChRIS_build(json_ChRISresp, a_URLsFromChRIS) {
     debug.functionName  = "URLsFromChRIS_build";
     debug.entering();
 
-    var str_ROOT        = json_ChRISresp.return.ROOT;
+    var str_ROOT        = json_SRVresp.return.ROOT;
 
     URLsFromChRIS_DOM.empty();
     if(typeof(a_URLsFromChRIS)==='object') {
         d_URLsFromChRIS = a_URLsFromChRIS.slice();
     } else {
-        d_URLsFromChRIS = json_ChRISresp.return.URL_get.slice();
+        d_URLsFromChRIS = json_SRVresp.return.URL_get.slice();
     }
 
     // Push the ROOT URLs
@@ -450,7 +772,7 @@ function URLsFromChRIS_build(json_ChRISresp, a_URLsFromChRIS) {
 
     // Now, build a breadcrumb path back through the data space
     if (str_pathUp.length) {
-        str_path    = json_ChRISresp.return.path;
+        str_path    = json_SRVresp.return.path;
         debug.vlog({message: 'str_path', var: str_path});
         l_path      = str_path.split('/');
         // Get rid of the trailing '/' if it exists.
@@ -471,7 +793,7 @@ function URLsFromChRIS_build(json_ChRISresp, a_URLsFromChRIS) {
     $.each(d_URLsFromChRIS, function (key, val) {
         if (!str_pathUp.length) {
             str_allFeedsBase    = str_ROOT + '/' + key_DOM.val();
-            str_pathUp          = str_allFeedsBase + '__' + json_ChRISresp.return.path;
+            str_pathUp          = str_allFeedsBase + '__' + json_SRVresp.return.path;
         }
         URLsFromChRIS_DOM.append(
                 $('<option></option>').val(key).html(val)
@@ -756,14 +1078,14 @@ function callback_AJAX_beforeSend() {
     debug.leaving();
 }
 
-function callback_AJAX_complete(json_ChRISresp, d_APIcall) {
+function callback_AJAX_complete(json_SRVresp, d_APIcall) {
     var debug = new C_debug();
     debug.functionName = "callback_AJAX_complete";
     debug.entering();
 
-    debug.vlog({message: 'json_ChRISresp', var: json_ChRISresp});
-    if(!json_ChRISresp.status &&
-        json_ChRISresp.message == 'JSON error in clientParams') {
+    debug.vlog({message: 'json_SRVresp', var: json_SRVresp});
+    if(!json_SRVresp.status &&
+        json_SRVresp.message == 'JSON error in clientParams') {
         debug.log({message: 'Retrying client call...'});
         debug.vlog({message: 'd_APIcall', var: d_APIcall});
         d_APIcall['branchOnREST']   = true;
@@ -772,7 +1094,7 @@ function callback_AJAX_complete(json_ChRISresp, d_APIcall) {
     debug.leaving();
 }
 
-function callback_AJAX_success(ChRISresp, d_APIcall) {
+function callback_AJAX_success(SRVresp, d_APIcall) {
     /*
     This is an asynchronous function, so when you hit a button in REST_call, state of
     available URLs etc are NOT updated until this function is called.
@@ -783,22 +1105,22 @@ function callback_AJAX_success(ChRISresp, d_APIcall) {
     debug.functionName  = "callback_AJAX_success";
     debug.entering();
 
-    ChRISresp           = JSON.stringify(ChRISresp, null, 2);
-    json_ChRISresp      = JSON.parse(ChRISresp);
+    SRVresp           = JSON.stringify(SRVresp, null, 2);
+    json_SRVresp      = JSON.parse(SRVresp);
 
-    debug.vlog({'message': 'json_ChRISresp', var: json_ChRISresp});
+    debug.vlog({'message': 'json_SRVresp', var: json_SRVresp});
     debug.vlog({'message': 'd_APIcall', var: d_APIcall});
     if(!b_URLsBuild)
         b_URLsBuild = true;
     else
         if(b_loginStatus) {
-            if(typeof(  json_ChRISresp.return['refreshREST'])==='boolean' &&
-                        json_ChRISresp.return['refreshREST']) {
+            if(typeof(  json_SRVresp.return['refreshREST'])==='boolean' &&
+                        json_SRVresp.return['refreshREST']) {
                 PUSH_DOM.style.display = "none";
                 PUSH_DOM.innerHTML = "";
                 b_PUSHchoicesRendered = false;
             }
-            URLsFromChRIS_build(json_ChRISresp);
+            URLsFromChRIS_build(json_SRVresp);
             if(d_APIcall['branchOnREST']) {
                 debug.log({message: 'About to call PUSH_choicesGET()...'});
                 if(RESTobject_detected()) PUSH_choicesGET();
@@ -810,9 +1132,9 @@ function callback_AJAX_success(ChRISresp, d_APIcall) {
     debug.vlog({message: 'showOutput', var: d_APIcall.showOutput});
     if(d_APIcall['showOutput']) {
         if (b_jsonSyntaxHighlight)
-            output(syntaxHighlight(ChRISresp));
+            output(syntaxHighlight(SRVresp));
         else
-            output((ChRISresp));
+            output((SRVresp));
         loginStatus_show(file_exist(str_loginURLtag));
     }
     if(RESTobject_detected()) {
@@ -861,7 +1183,7 @@ function REST_call(d_APIcall) {
     debug.cl();
     debug.entering();
 
-    ChRISresp           = null;
+    SRVresp           = null;
 
     loginStatus_fileTagGenerate();
 
@@ -886,10 +1208,10 @@ function REST_call(d_APIcall) {
         data:           d_APIcall['data'],
         beforeSend:     callback_AJAX_beforeSend,
         complete:       function() {
-            callback_AJAX_complete(json_ChRISresp, d_APIcall);
+            callback_AJAX_complete(json_SRVresp, d_APIcall);
         },
-        success:        function(ChRISresp) {
-                        callback_AJAX_success(ChRISresp, d_APIcall);
+        success:        function(SRVresp) {
+                        callback_AJAX_success(SRVresp, d_APIcall);
         },
         error:          callback_AJAX_error
     });
@@ -958,7 +1280,7 @@ function PUSH_choicesParse() {
     debug.functionName  = "PUSH_choicesParse";
     debug.entering();
 
-    d_choice = json_ChRISresp.return.payload;
+    d_choice = json_SRVresp.return.payload;
 
     debug.vlog( {message: 'd_choice', var: d_choice});
     debug.vlog( {message: 'd_choice.keys()', var: Object.keys(d_choice)});
@@ -1021,28 +1343,28 @@ function PUSH_choicesBuild(d_PUSH, d_APIcall) {
             str_element     = 'PUSH_' + key;
 
             // Get the contents for each push element
-            l_URL           = json_ChRISresp.return.URL_get;
+            l_URL           = json_SRVresp.return.URL_get;
             b_textarea_mk   = false;
             rows            = 5;
             l_URL.forEach(function (url) {
                 if(url.indexOf(key) >= 0) {
-                    str_pathToObject    = json_ChRISresp.return.path;
+                    str_pathToObject    = json_SRVresp.return.path;
                     str_endNode         = str_pathToObject.split('/').slice(-1)[0];
                     str_endNodeParent   = str_pathToObject.split('/').slice(-2, -1)[0];
                     debug.vlog({message: 'str_endNodeParent',   var: str_endNodeParent});
                     debug.vlog({message: 'str_endNode',         var: str_endNode});
                     str_contents        = '';
                     if(str_endNode == key) {
-                        debug.vlog({message: 'typeof(json_ChRISresp.return.payload[key])', var: typeof(json_ChRISresp.return.payload[key])})
-                        if(typeof(json_ChRISresp.return.payload[key])==='string') {
+                        debug.vlog({message: 'typeof(json_SRVresp.return.payload[key])', var: typeof(json_SRVresp.return.payload[key])})
+                        if(typeof(json_SRVresp.return.payload[key])==='string') {
                             debug.vlog({message: 'pathInObject -- return.payload + ', var: key});
-                            str_contents = json_ChRISresp.return.payload[key];
+                            str_contents = json_SRVresp.return.payload[key];
                         }
                     } else {
-                        debug.vlog({message: 'typeof(json_ChRISresp.return.payload[str_endNode][key])', var: typeof(json_ChRISresp.return.payload[str_endNode][key])})
-                        if(typeof(json_ChRISresp.return.payload[str_endNode][key])==='string') {
+                        debug.vlog({message: 'typeof(json_SRVresp.return.payload[str_endNode][key])', var: typeof(json_SRVresp.return.payload[str_endNode][key])})
+                        if(typeof(json_SRVresp.return.payload[str_endNode][key])==='string') {
                             debug.vlog({message: 'pathInObject -- return.payload.' + str_endNode + ' + ', var: key});
-                            str_contents = json_ChRISresp.return.payload[str_endNode][key];
+                            str_contents = json_SRVresp.return.payload[str_endNode][key];
                         }
                     }
                     debug.vlog({message: 'str_contents for ' + key, var: str_contents});
@@ -1083,7 +1405,7 @@ function PUSH_choicesBuild(d_PUSH, d_APIcall) {
             $("#dom_PUSH").append(str_innerHTML);
 
             PUSH_choice_DOM         = document.getElementById(str_element);
-            debug.vlog({message: 'json_ChRISresp', var: json_ChRISresp});
+            debug.vlog({message: 'json_SRVresp', var: json_SRVresp});
 
             // And not place the contents into the locations in the HTML elements.
             l_URL.forEach(function (url) {
