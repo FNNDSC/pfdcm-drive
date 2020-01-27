@@ -85,12 +85,13 @@
                     <div class="pure-control-group">
                         <label>IP:port</label>
                         <input style="width:525px;font-family:courier;" id="pfdcm_IP" name="pfdcm_IP" value=""/>:
-                        <input style="width:70px;font-family:courier;" type="text" id="pfdcm_port" value="5555"/>
+                        <input style="width:70px;font-family:courier;" type="text" id="pfdcm_port" name="pfdcm_port" value="5555"/>
                     </div>
                     <div class="pure-control-group">
                         <label>
                             <button onclick="return REST_call({'operation': 'pfdcm_detailGet'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">GET pfdcm INTERNAL STATE</button>
                         </label>
+                        <input style="width:225px;font-family:courier;" id="pfdcm_get" name="pfdcm_get" value="/" />
                     </div>
                 </div>
 
@@ -99,7 +100,7 @@
                     <div class="pure-control-group">
                         <label>IP:port</label>
                         <input style="width:525px;font-family:courier;" id="PACS_IP" name="PACS_IP" value=""/>:
-                        <input style="width:70px;font-family:courier;" type="text" id="PACS_port" value="5555"/>
+                        <input style="width:70px;font-family:courier;" type="text" id="PACS_port" name="PACS_port" value="5555"/>
                     </div>
                     <div class="pure-control-group">
                         <label>AETitle</label>
@@ -123,7 +124,7 @@
                     <legend>Macro Calls</legend>
                     <div class="pure-control-group">
                         <label>
-                            <button onclick="return REST_call({'operation': 'pacs_set'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">hello</button>
+                            <button onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">hello</button>
                         </label>
                     </div>
                 </div>
