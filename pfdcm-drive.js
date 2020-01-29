@@ -234,7 +234,23 @@ MSG.prototype = {
 }
 
 /////////
-///////// REST calling object
+///////// PFResponse object
+/////////
+
+function PFResponse(str_response) {
+    this.help = `
+        The PFResponse processes the rather idiosyncratic return
+        from PF-family services
+    `;
+    this.str_response   = str_response;
+}
+
+PFResponse.prototype = {
+    constructor:    PFResponse,
+}
+
+/////////
+///////// AJAX abstraction object
 /////////
 
 function AJAX(Msg) {
@@ -293,7 +309,7 @@ AJAX.prototype = {
         debug.leaving();
     },
 
-    call: function (payload) {
+    transmitAndProcess: function (payload) {
         $.ajax({
             type:           this.TX.d_comms['VERB'],
             url:            this.TX.str_schemeAuthPath,
@@ -321,7 +337,9 @@ function Fetch(Msg) {
     this.SRVresp        = null;
     this.json_SRVresp   = null;
     this.TX             = Msg;
+    this.TXoptions      = {};
     this.fetchRetries   = 5;
+    this.payload        = '';
 }
 
 Fetch.prototype = {
@@ -334,27 +352,15 @@ Fetch.prototype = {
         any 'headers' seems to trigger an OPTIONS verb in the
         server irrespective of the 'method' value.
         */
+        var debug = new Debug("Fetch.postData");
+        debug.entering();
 
-        // Default options are marked with *
-        const response = await fetch(url, {
-            method:         this.TX.d_comms['VERB'],    // *GET, POST, PUT, DELETE, etc.
-            mode:           'cors',                     // no-cors, *cors, same-origin
-            cache:          'no-cache',                 // *default, no-cache, reload, force-cache, only-if-cached
-            credentials:    'same-origin',              // include, *same-origin, omit
-            // headers: {
-            //     // 'Content-Type': 'application/json'
-            //     // 'Content-Type': 'application/x-www-form-urlencoded',
-            // },
-            redirect:       'follow',                   // manual, *follow, error
-            referrerPolicy: 'no-referrer',              // no-referrer, *client
-            // body data type must match "Content-Type" header
-            body: JSON.stringify(data)
-        });
-        // return await response.json(); // parses JSON response into native JavaScript objects
-        return await response.text(); // parses JSON response into native JavaScript objects
+        const response  = await fetch(url, this.TXoptions);
+        debug.leaving();
+        return response.text();
     },
 
-    handleErrorsInResponse: function (response) {
+    handleErrorsInResponse:  async function (response) {
         var debug = new Debug("Fetch.handleErrorsInResponse");
         debug.entering();
         // Some parsing on 'reponse' for an error condition,
@@ -363,19 +369,22 @@ Fetch.prototype = {
         //     throw Error(response.statusText);
         // }
         debug.leaving();
-        return response;
+        return await response;
     },
 
-    handleReponse: function (response) {
+    handleReponse:  function (response) {
         var debug = new Debug("Fetch.handleResponse");
         debug.entering();
 
         console.log(response);
-
+        
         debug.leaving();
+
+        return response;
+
     },
 
-    handleErrorsInFetch: function (response) {
+    handleErrorsInFetch:  async function (response) {
         var debug = new Debug("Fetch.handleErrorsInFetch");
         debug.entering();
         // Some parsing on 'reponse' for an error condition,
@@ -384,48 +393,84 @@ Fetch.prototype = {
         //     throw Error(response.statusText);
         // }
         debug.vlog({ 'message': '\nresponse', var: response });
+
+        console.log('attempting to call again!');
+        // this.fetch_retry(this.TX.str_schemeAuthPath, this.TXoptions, this.fetchRetries)
+        // .then(this.handleErrorsInResponse)
+        // .then(this.handleReponse)
+        try {
+            str_response  = await this.postData(this.TX.str_schemeAuthPath, this.payload);
+            // str_response  = await fetch(this.TX.str_schemeAuthPath, this.TXoptions);
+        } catch(e) {
+            this.handleErrorsInFetch(e);
+        } finally {
+            this.handleReponse(str_response);
+        }
+
         debug.leaving();
-        return response;
+        return await response;
     },
 
     sleep:          function(milliseconds) {
         return new Promise(resolve => setTimeout(resolve, milliseconds))
     },
 
-    fetch_retry:    async (url, options, n) => {
-        try {
-            await sleep(500);
-            return await fetch(url, options)
-        } catch (err) {
-            if (n === 1) throw err;
-            return await this.fetch_retry(url, options, n - 1);
-        }
-    },
-
-    // call:           function(payload) {
-    //     options = {
-    //         method:         this.TX.d_comms['VERB'],    // *GET, POST, PUT, DELETE, etc.
-    //         mode:           'cors',                     // no-cors, *cors, same-origin
-    //         cache:          'no-cache',                 // *default, no-cache, reload, force-cache, only-if-cached
-    //         credentials:    'same-origin',              // include, *same-origin, omit
-    //         redirect:       'follow',                   // manual, *follow, error
-    //         referrerPolicy: 'no-referrer',              // no-referrer, *client
-    //         // body data type must match "Content-Type" header
-    //         body: JSON.stringify(payload)
-    //     };
-    //     url     = this.TX.str_schemeAuthPath;
-    //     n       = 4;
-    //     SRVresp = this.fetch_retry(url, options, n);
+    // fetch_retry:    async (url, options, n) => {
+    //     try {
+    //         return await fetch(url, options)
+    //     } catch (err) {
+    //         if (n === 1) throw err;
+    //         return await this.fetch_retry(url, options, n - 1);
+    //     }
     // },
 
-    call: function (payload) {
-        this.postData(
-            this.TX.str_schemeAuthPath,
-            payload)
-        .then(this.sleep(500))
-        .then(this.handleErrorsInResponse)
-        .then(this.handleReponse)
-        .catch(this.handleErrorsInFetch);
+    fetch_retry:    async (url, options, n) => {
+        var debug = new Debug("Fetch.fetch_retry");
+        debug.entering();
+
+        let error;
+        for(let i=0; i<n; i++) {
+            try {
+                return await fetch(url, options);
+            } catch(err) {
+                error =err;                
+            }
+        }
+        debug.leaving();
+        throw error;
+    },
+
+    transmitAndProcess: async function (payload) {
+        this.payload    = payload;
+        this.TXoptions  = {
+            method:         this.TX.d_comms['VERB'],    // *GET, POST, PUT, DELETE, etc.
+            mode:           'cors',                     // no-cors, *cors, same-origin
+            cache:          'no-cache',                 // *default, no-cache, reload, force-cache, only-if-cached
+            credentials:    'same-origin',              // include, *same-origin, omit
+            headers: {
+                'Content-Type': 'text/plain'
+                // 'Content-Type': 'application/json'
+                // 'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            redirect:       'follow',                   // manual, *follow, error
+            referrerPolicy: 'no-referrer',              // no-referrer, *client
+            // body data type must match "Content-Type" header
+            body: JSON.stringify(payload)
+        };
+
+        try {
+            str_response  = await this.postData(this.TX.str_schemeAuthPath, payload);
+            // str_response  = await fetch(this.TX.str_schemeAuthPath, this.TXoptions);
+        } catch(e) {
+            this.handleErrorsInFetch(e);
+        } finally {
+            this.handleReponse(str_response);
+        }
+
+        // this.postData(this.TX.str_schemeAuthPath, payload)
+        // .then(this.handleErrorsInResponse)
+        // .then(this.handleReponse)
+        // .catch(this.handleErrorsInFetch);
     },
 
 }
@@ -478,7 +523,7 @@ REST.prototype = {
         /*
         Say hello to pfdcm
         */
-        this.call(this.msg.hello());
+        this.transmitAndProcess(this.msg.hello());
     },
 
     do:                     function(d_op) {
@@ -489,8 +534,8 @@ REST.prototype = {
         }
     },
 
-    call:                   function(payload) {
-        this.clientAPI.call(payload);
+    transmitAndProcess: function(payload) {
+        this.clientAPI.transmitAndProcess(payload);
     },
 
 }
