@@ -96,6 +96,16 @@
                 </div>
 
                 <div style="border:0px groove grey; padding: 5px;">
+                    <legend><tt>pfdcm</tt> Macro Calls</legend>
+                    <div class="pure-control-group">
+                        <label>
+                            <!-- <button onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">hello</button> -->
+                            <input type="button" onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">hello</input>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="border:0px groove grey; padding: 5px;">
                     <legend>PACS Detail</legend>
                     <div class="pure-control-group">
                         <label>IP:port</label>
@@ -121,13 +131,25 @@
                 </div>
 
                 <div style="border:0px groove grey; padding: 5px;">
-                    <legend>Macro Calls</legend>
+                    <legend>PACS Query</legend>
+                    <div class="pure-control-group">
+                        <label>PatientID</label>
+                        <input style="width:225px;font-family:courier;" id="PatientID" name="PatientID" value=""/>
+                        <label>Accession Number </label>
+                        <input style="width:225px;font-family:courier;" id="AccessionNumber" name="AccessionNumber" value=""/>
+                        <label>StudyDate</label>
+                        <input style="width:225px;font-family:courier;" id="StudyDate" name="StudyDate" value=""/>
+                        <label>Modality</label>
+                        <input style="width:225px;font-family:courier;" id="Modality" name="Modality" value=""/>                    
+                    </div>
                     <div class="pure-control-group">
                         <label>
-                            <button onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">hello</button>
-                        </label>
+                            <button onclick="return REST_call({'operation': 'pacs_set'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">QUERY</button>
+                        </labelclass="pure-input-1-2" id="QUERY" style="width:595px;">
+                        </select>
                     </div>
                 </div>
+
 
                 <button onclick="window.location.reload(true)" 
                 class="pure-button pure-button-primary button-reset">Reset</button>
