@@ -106,7 +106,6 @@ Debug.prototype = {
 
 }
 
-
 /////////
 ///////// DOM object
 /////////
@@ -133,6 +132,12 @@ DOM.prototype = {
             return $('#'+str_key).val()
         } else {
             return null;
+        }
+    },
+
+    html:   function(str_key, str_val) {
+        if(this.l_DOM.includes(str_key)) {
+            $('#'+str_key).html(str_val)
         }
     },
 
@@ -229,6 +234,25 @@ MSG.prototype = {
                 "echoBack": "greetings"
             }
         };   
+        return(d_msg);    
+    },
+
+    pfdcm_get:                  function() {
+        /*
+        Return the JSON payload for a 'pfdcm_get' message.
+        */
+
+        // Build the schemeAuthPath at message compose since
+        // DOM elements might have changed asynchronously.
+        this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
+        d_msg = {
+            "action": "internalctl",
+            "meta": {
+                "var":      DOMpfdcm.get('pfdcm_get'),
+                "get":      "value"
+            }
+        };
+
         return(d_msg);    
     }
 }
@@ -382,7 +406,7 @@ Fetch.prototype = {
         debug.entering();
 
         console.log(response);
-        
+        DOMpfdcm.html('pfdcm_out', response);
         debug.leaving();
 
         return response;
@@ -500,10 +524,20 @@ REST.prototype = {
         this.transmitAndProcess(this.msg.hello());
     },
 
+    pfdcm_get:                  function() {
+        /*
+        Say hello to pfdcm
+        */
+        this.transmitAndProcess(this.msg.pfdcm_get());
+    },
+
     do:                     function(d_op) {
         if('operation' in d_op) {
             switch(d_op['operation']) {
-                case 'hello':   this.hello();
+                case 'hello':       this.hello();
+                                    break;
+                case 'pfdcm_get':   this.pfdcm_get();
+                                    break;
             }
         }
     },
@@ -529,8 +563,18 @@ l_urlParams = [
     "PACS_name"
 ];
 
+l_pfdcm = [
+    "pfdcm_get",
+    "pfdcm_out"
+];
+
+// DOM elements
 DOMurl      = new DOM(l_urlParams);
+DOMpfdcm    = new DOM(l_pfdcm);
+
+// Parse URL and populate page elements
 url         = new URL(DOMurl);
+
 post        = new REST( {
                             'VERB':         'POST',
                             'type':         'text',

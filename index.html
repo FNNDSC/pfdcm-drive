@@ -89,7 +89,8 @@
                     </div>
                     <div class="pure-control-group">
                         <label>
-                            <button onclick="return REST_call({'operation': 'pfdcm_detailGet'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">GET pfdcm INTERNAL STATE</button>
+                            <!-- <button onclick="return REST_call({'operation': 'pfdcm_detailGet'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">GET pfdcm INTERNAL STATE</button> -->
+                            <input type="button" onclick="return post.do({'operation': 'pfdcm_get'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="GET pfdcm INTERNAL STATE"></input>
                         </label>
                         <input style="width:225px;font-family:courier;" id="pfdcm_get" name="pfdcm_get" value="/" />
                     </div>
@@ -100,13 +101,18 @@
                     <div class="pure-control-group">
                         <label>
                             <!-- <button onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">hello</button> -->
-                            <input type="button" onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">hello</input>
+                            <input type="button" onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="hello"></input>
                         </label>
                     </div>
                 </div>
 
+                <div style="border:0px groove grey; padding: 5px; width:725px; height:225px;">
+                    <pre style="width:725px; height:225px; background-color:black; color:green;   font: 0.8rem Inconsolata, monospace;" name="pfdcm_out" id="pfdcm_out">
+                    </pre>
+                </div>
+
                 <div style="border:0px groove grey; padding: 5px;">
-                    <legend>PACS Detail</legend>
+                    <legend><br>PACS Detail</legend>
                     <div class="pure-control-group">
                         <label>IP:port</label>
                         <input style="width:525px;font-family:courier;" id="PACS_IP" name="PACS_IP" value=""/>:
