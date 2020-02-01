@@ -1,4 +1,4 @@
-terminal {
+/* terminal {
   background-color: black;
   background-image: radial-gradient(
     rgba(0, 150, 0, 0.75), black 120%
@@ -33,7 +33,7 @@ terminal {
 }
 pre {
   margin: 0;
-}
+} */
 
 h3{
 margin:5px;

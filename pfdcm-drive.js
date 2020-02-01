@@ -178,25 +178,56 @@ URL.prototype = {
 }
 
 /////////
+///////// PFResponse object
+/////////
+
+function PFResponse(str_response) {
+    this.help = `
+        The PFResponse processes the rather idiosyncratic return
+        from PF-family services
+    `;
+    if(typeof str_response === 'undefined') {
+        this.str_response   = ''
+    } else {
+        this.str_response   = str_response;
+    }
+}
+
+PFResponse.prototype = {
+    constructor:    PFResponse,
+}
+
+/////////
 ///////// MSG object
 /////////
-/*
-    This object generates messages to send to the remote 
-    `pfdcm` server
-*/
 
 function MSG(d_comms) {
+    this.help = `
+    The MSG object primarily does two things:
+
+        *   it is responsible for generating the actual message payload
+            to transmit to a remote service
+        *   it has a concept of where in the DOM to push results
+        
+    In this fashion, the MSG object is the proactical contact surface 
+    between idiosyncracies of the remote service (the actual message 
+    construct that the service understands) and also the idiosyncracies
+    of the styling and structure of the DOM so as to best display results.
+
+    As such there is an implicit coupling between this object and the 
+    syntax of the remote server as well as the named elements in the DOM.
+    `;
+
     // parameters governing the message comms in general
     this.d_comms            = d_comms;
-
-    // this.str_VERB           = d_comms['VERB'];
-    // this.scheme             = d_comms['scheme'];
-    // this.str_path           = d_comms['path'];
-    // this.type               = d_comms['type'];
 
     // info on this *specific* message
     this.payload            = '';
     this.str_schemeAuthPath = '';
+
+    this.pfresponse         = new PFResponse();
+    this.DOMoutput          = null;
+
 }
 
 MSG.prototype = {
@@ -223,10 +254,6 @@ MSG.prototype = {
         // Build the schemeAuthPath at message compose since
         // DOM elements might have changed asynchronously.
         this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
-        d_meta  = {
-            "askAbout": "sysinfo",
-            "echoBack": "greetings"
-        };
         d_msg = {
             "action": "hello",
             "meta": {
@@ -252,25 +279,8 @@ MSG.prototype = {
                 "get":      "value"
             }
         };
-
         return(d_msg);    
     }
-}
-
-/////////
-///////// PFResponse object
-/////////
-
-function PFResponse(str_response) {
-    this.help = `
-        The PFResponse processes the rather idiosyncratic return
-        from PF-family services
-    `;
-    this.str_response   = str_response;
-}
-
-PFResponse.prototype = {
-    constructor:    PFResponse,
 }
 
 /////////
@@ -406,7 +416,9 @@ Fetch.prototype = {
         debug.entering();
 
         console.log(response);
-        DOMpfdcm.html('pfdcm_out', response);
+        // DOMpfdcm.html('pfdcm_out', response);
+        this.TX.pfresponse(response);
+        DOMpfdcm.html('data_pfdcm', response);
         debug.leaving();
 
         return response;
@@ -565,12 +577,17 @@ l_urlParams = [
 
 l_pfdcm = [
     "pfdcm_get",
-    "pfdcm_out"
+    "pfdcm_out",
+    "data_pfdcm"
 ];
 
 // DOM elements
 DOMurl      = new DOM(l_urlParams);
 DOMpfdcm    = new DOM(l_pfdcm);
+
+// termynal
+// var termynal_pfdcm  = new Termynal('#termynal_pfdcm');
+// var termynal_pacs   = new Termynal('#termynal_pacs');
 
 // Parse URL and populate page elements
 url         = new URL(DOMurl);

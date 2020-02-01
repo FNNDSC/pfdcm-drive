@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
     <link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/terminal.css">
+    <!-- <link rel="stylesheet" href="https://unpkg.com/terminal.css"> -->
+    <link rel="stylesheet" href="termynal.css">
 
     <!-- 3rd Party js -->
     <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
@@ -107,9 +108,13 @@
                     </div>
                 </div>
 
-                <div style="border:0px groove grey; padding: 5px; width:725px; height:225px;">
+                <!-- <div style="border:0px groove grey; padding: 5px; width:725px; height:225px;">
                     <pre style="width:725px; height:225px; background-color:black; color:green;   font: 0.8rem Inconsolata, monospace;" name="pfdcm_out" id="pfdcm_out">
                     </pre>
+                </div> -->
+
+                <div id="termynal_pfdcm" name="termynal_pfdcm" data-termynal>
+                    <span data-ty id="data_pfdcm" name="data_pfdcm"></span>
                 </div>
 
                 <div style="border:0px groove grey; padding: 5px;">
@@ -169,6 +174,7 @@
 
     <div class="modal"><!-- Place at bottom of page --></div>
     
+    <script src="termynal.js" data-termynal-container="#termynal_pfdcm|#termynal_pacs"></script>
     <script src="pfdcm-drive.js"></script>
 
 </body>
