@@ -87,12 +87,12 @@ float:left;
 float:right;
 }
 
-pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
-.string     { font-family:courier; color: green; }
-.number     { font-family:courier; color: darkorange; }
-.boolean    { font-family:courier; color: blue; }
+prebox {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
+.string     { font-family:courier; color: lightgreen; }
+.number     { font-family:courier; color: orange; }
+.boolean    { font-family:courier; color: lightblue; }
 .null       { font-family:courier; color: magenta; }
-.key        { font-family:courier; color: red; }
+.key        { font-family:courier; color: cyan; }
 
 .input {
 font-family: courier;
@@ -208,6 +208,10 @@ font-size:      1em;
 .button-loginStatus-loggedIn {
     background: rgb(28, 184, 65); /* this is a green */
 }
+
+.button-termynal-clear {
+    background: rgb(223, 117, 20); /* this is an orange */
+};
 
 .button-jsonHighlight-on {
     background: rgb(28, 184, 65); /* this is a green */
