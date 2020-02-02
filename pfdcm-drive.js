@@ -109,25 +109,25 @@ Debug.prototype = {
 /////////
 ///////// DOM object
 /////////
-/*
-    This object provides a convenient abstraction
-    for accessing named components of the DOM, removing
-    the very tight coupling that might occur by referening
-    DOM literals.
-*/
 
 function DOM(al_keylist) {
+    this.str_help = `
+    This object provides a convenient abstraction
+    for accessing and interacting with named components 
+    of the DOM, removing the very tight coupling that 
+    might occur by referening DOM literals directly in JS.
+    `;
     this.l_DOM = al_keylist;
 }
 
 DOM.prototype = {
     constructor:    DOM,
 
-    elements:   function() {
+    elements:           function() {
         return this.l_DOM;
     },
 
-    get:    function(str_key) {
+    get:                function(str_key) {
         if(this.l_DOM.includes(str_key)) {
             return $('#'+str_key).val()
         } else {
@@ -135,13 +135,30 @@ DOM.prototype = {
         }
     },
 
-    html:   function(str_key, str_val) {
+    html:               function(str_key, str_val) {
         if(this.l_DOM.includes(str_key)) {
             $('#'+str_key).html(str_val)
         }
     },
 
-    set:    function(str_key, str_val) {
+    innerHTML_listadd:  function(str_key, l_val) {
+        if(this.l_DOM.includes(str_key)) {
+            for(const str_line of l_val) {
+                document.getElementById(str_key).innerHTML += str_line;
+            }
+        }
+    },
+
+    innerHTML_listset:  function(str_key, l_val) {
+        if(this.l_DOM.includes(str_key)) {
+            document.getElementById(str_key).innerHTML = '';
+            for(const str_line of l_val) {
+                document.getElementById(str_key).innerHTML += str_line;
+            }
+        }
+    },
+
+    set:                function(str_key, str_val) {
         if(this.l_DOM.includes(str_key)) {
             $('#'+str_key).val(str_val)
             return $('#'+str_key).val();
@@ -154,12 +171,12 @@ DOM.prototype = {
 /////////
 ///////// URL object
 /////////
-/*
-    This object parses the URL for parameters to set in the 
-    dashboard.
-*/
 
 function URL(dom) {
+    this.str_help   = `
+    This object parses the URL for parameters to set in the 
+    dashboard.
+    `;
     this.dom        = dom;
     this.str_query  = window.location.search;
     this.urlParams  =  new URLSearchParams(this.str_query);
@@ -181,20 +198,42 @@ URL.prototype = {
 ///////// PFResponse object
 /////////
 
-function PFResponse(str_response) {
+function PFResponse(response) {
     this.help = `
         The PFResponse processes the rather idiosyncratic return
-        from PF-family services
+        from PF-family services.
     `;
-    if(typeof str_response === 'undefined') {
-        this.str_response   = ''
-    } else {
-        this.str_response   = str_response;
-    }
-}
+ 
+    this.response       = response;
+    this.str_response   = '';
+    this.json_response  = {};
+
+    this.response_typeParse(response);
+
+};   
 
 PFResponse.prototype = {
     constructor:    PFResponse,
+
+    response_typeParse: function(response) {
+        switch(typeof(response)) {
+            case    'undefined':
+                break;
+            case    'string':
+                this.str_response   = response;
+                break;
+            case    'object':
+                this.json_response  = response;
+        };
+    },
+
+    set:        function(response) {
+        this.response_typeParse(response);
+    },
+
+    str_get:    function() {
+        return(this.str_response);
+    }
 }
 
 /////////
@@ -207,9 +246,9 @@ function MSG(d_comms) {
 
         *   it is responsible for generating the actual message payload
             to transmit to a remote service
-        *   it has a concept of where in the DOM to push results
+        *   it has a concept of where in the DOM to "write" results
         
-    In this fashion, the MSG object is the proactical contact surface 
+    In this fashion, the MSG object is the proverbial contact surface 
     between idiosyncracies of the remote service (the actual message 
     construct that the service understands) and also the idiosyncracies
     of the styling and structure of the DOM so as to best display results.
@@ -218,15 +257,21 @@ function MSG(d_comms) {
     syntax of the remote server as well as the named elements in the DOM.
     `;
 
-    // parameters governing the message comms in general
+    // parameters governing the message comms
     this.d_comms            = d_comms;
+
+    // the page we're acting within
+    this.page               = d_comms['page'];
 
     // info on this *specific* message
     this.payload            = '';
     this.str_schemeAuthPath = '';
 
+    // Response and links to the page components with which to 
+    // interact
     this.pfresponse         = new PFResponse();
     this.DOMoutput          = null;
+    this.str_DOMkey         = '';
 
 }
 
@@ -234,27 +279,76 @@ MSG.prototype = {
     constructor:    MSG,
 
     APIschemeAuthPath_build:    function() {
-        /*
+        str_help = `
         Return the first part of the API call, typically the
         http://<host>[:<IP>][/path]
-        */
-        return(this.d_comms['scheme']       + 
-               '://'                        +
-               DOMurl.get('pfdcm_IP')       +
-               ':'                          +
-               DOMurl.get('pfdcm_port')     +
+        `;
+
+        return(this.d_comms['scheme']               +
+               '://'                                +
+               this.page.DOMurl.get('pfdcm_IP')     +
+               ':'                                  +
+               this.page.DOMurl.get('pfdcm_port')   +
                this.d_comms['path']);
     },
 
+    syntaxHighlight:            function(json) {
+        var str_help = `
+            Convert an input string to colorized html string
+        `;
+        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            var cls = 'number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'key';
+                } else {
+                    cls = 'string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'boolean';
+            } else if (/null/.test(match)) {
+                cls = 'null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        });
+    },
+
+    syntaxHighlight_termynal:   function(json) {
+        var str_help = `
+            Convert an input string to colorized html string suitable
+            for termynal. Note the return from this function still needs to
+            split into a list!
+        `;
+        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            var cls = 'number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'key';
+                } else {
+                    cls = 'string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'boolean';
+            } else if (/null/.test(match)) {
+                cls = 'null';
+            }
+            return '<span data-ty class="' + cls + '">' + match + '</span>';
+        });
+    },
+
     hello:                      function() {
-        /*
+        str_help = `
         Return the JSON payload for a 'hello' message.
-        */
+        `;
 
         // Build the schemeAuthPath at message compose since
         // DOM elements might have changed asynchronously.
         this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
-        d_msg = {
+        this.str_DOMkey         = 'termynal_pfdcm';
+        this.DOMoutput          = this.d_comms['MSGdom']['dom'];
+        var d_msg = {
             "action": "hello",
             "meta": {
                 "askAbout": "sysinfo",
@@ -265,21 +359,77 @@ MSG.prototype = {
     },
 
     pfdcm_get:                  function() {
-        /*
+        str_help = `
         Return the JSON payload for a 'pfdcm_get' message.
-        */
+        `;
 
         // Build the schemeAuthPath at message compose since
         // DOM elements might have changed asynchronously.
         this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
-        d_msg = {
+        this.str_DOMkey         = 'termynal_pfdcm';
+        this.DOMoutput          = this.d_comms['MSGdom']['dom'];
+        var d_msg = {
             "action": "internalctl",
             "meta": {
-                "var":      DOMpfdcm.get('pfdcm_get'),
+                "var":      this.page.DOMpfdcm.get('pfdcm_get'),
                 "get":      "value"
             }
         };
         return(d_msg);    
+    },
+
+    to_termynal:                function() {
+        str_help = `
+            Convert a multi-line response string to termynal
+            friendly html. Each line of response string needs its
+            own html tagged line of form:
+
+                    <span data-ty>some string...</span>
+
+        `;
+        var l_header    = this.pfresponse.str_get().split('\r');
+
+        // The 4th element of l_lines contains the actual
+        // JSON return payload. We need to split on '\n'
+        // on that list element
+        var l_body                      = l_header[4].split('\n');
+        this.pfresponse.json_response   = JSON.parse(l_header[4]);
+
+        if(this.page.b_jsonSyntaxHighlight) {
+            json_color                      = this.syntaxHighlight(l_header[4]);
+            l_body                          = json_color.split('\n');
+        } else {
+            l_body                          = l_header[4].split('\n');
+        }
+    
+        // Remove the last element (payload) of l_header...
+        l_header.pop();
+
+        // and concat the l_header with the l_body
+        var l_lines     = l_header.concat(l_body);
+
+        var l_termynal  = [];
+        let counter = str => {
+            return str.split('').reduce((total, letter) => {
+              total[letter] ? total[letter]++ : total[letter] = 1;
+              return total;
+            }, {});
+          };
+
+        for(var str_line of l_lines) {
+            let hist    = counter(str_line);
+            if(' ' in hist) {
+                let count   = hist[' '];
+                let str_pad = new Array(count + 1).join('&nbsp;');
+                if(this.page.b_jsonSyntaxHighlight) 
+                    str_line = str_line.replace('">"', '">' + str_pad + '"');
+                else
+                    str_line = str_pad + str_line;
+            }
+            l_termynal.push("<span data-ty>" + str_line + "</span>");
+
+        }
+        return(l_termynal);
     }
 }
 
@@ -288,7 +438,7 @@ MSG.prototype = {
 /////////
 
 function AJAX(Msg) {
-    this.help = `
+    this.str_help = `
         The AJAX object specifies communication basics using
         the jQuery $.ajax(...) mechanism. 
 
@@ -360,7 +510,7 @@ AJAX.prototype = {
 }
 
 function Fetch(Msg) {
-    this.help = `
+    var help = `
         The Fetch object specifies communication basics using
         the fetch(...) mechanism. 
 
@@ -381,12 +531,13 @@ Fetch.prototype = {
     constructor: Fetch,
 
     postData: async function (url = '', data = {}) {
-        /*
-        Note that "weird" behaviour in comms is most often
-        linked to parameter settings below. For example, sending
-        any 'headers' seems to trigger an OPTIONS verb in the
-        server irrespective of the 'method' value.
-        */
+        var str_help = `
+            Note that "weird" behaviour in comms is most often
+            linked to parameter settings below. For example, sending
+            any 'headers' seems to trigger an OPTIONS verb in the
+            server irrespective of the 'method' value.
+        `;
+
         var debug = new Debug("Fetch.postData");
         debug.entering();
 
@@ -416,9 +567,9 @@ Fetch.prototype = {
         debug.entering();
 
         console.log(response);
-        // DOMpfdcm.html('pfdcm_out', response);
-        this.TX.pfresponse(response);
-        DOMpfdcm.html('data_pfdcm', response);
+        this.TX.pfresponse.set(response);
+        var l_termynal  = this.TX.to_termynal();
+        this.TX.DOMoutput.innerHTML_listadd(this.TX.str_DOMkey, l_termynal);
         debug.leaving();
 
         return response;
@@ -480,7 +631,6 @@ Fetch.prototype = {
         } finally {
             this.handleReponse(str_response);
         }
-
     },
 
 }
@@ -527,19 +677,19 @@ function REST(d_comms) {
 }
 
 REST.prototype = {
-    constructor:    REST,
+    constructor:            REST,
 
     hello:                  function() {
-        /*
+        var str_help = `
         Say hello to pfdcm
-        */
+        `;
         this.transmitAndProcess(this.msg.hello());
     },
 
-    pfdcm_get:                  function() {
-        /*
+    pfdcm_get:              function() {
+        var str_help = `
         Say hello to pfdcm
-        */
+        `;
         this.transmitAndProcess(this.msg.pfdcm_get());
     },
 
@@ -560,45 +710,114 @@ REST.prototype = {
 
 }
 
+function Page() {
+    this.str_help = `
+    The Page object defines/interacts with the html page.
+
+    The page element strings are "defined" here, and various
+    DOM objects that can interact with these elements are also
+    instantiated.
+    `;
+
+    this.b_jsonSyntaxHighlight      = true;
+
+
+    // DOM keys grouped logically
+    this.l_urlParams = [   
+        "pfdcm_IP", 
+        "pfdcm_port", 
+        "PACS_IP", 
+        "PACS_port", 
+        "PACS_AET", 
+        "PACS_AEC", 
+        "PACS_AETL",
+        "PACS_name"
+    ];
+
+    // DOM keys related to the pfdcm parts of the page
+    this.l_pfdcm = [
+        "pfdcm_get",
+        "pfdcm_out",
+        "data_pfdcm"
+    ];
+
+    // DOM keys related to termynal parts of the page
+    this.l_termynal = [
+        "termynal_pfdcm",
+        "termynal_pacs"
+    ];
+
+    // DOM obj elements --  built off keys and providing page
+    //                      access functionality
+    this.DOMurl         = new DOM(this.l_urlParams);
+    this.DOMpfdcm       = new DOM(this.l_pfdcm);
+    this.DOMtermynal    = new DOM(this.l_termynal)
+
+    this.url            = new URL(this.DOMurl);
+    // object to allow a MSG object access to a DOM obj
+    this.d_MSGtermynal   = {
+        'element':  this.l_termynal,
+        'dom':      this.DOMtermynal
+    };
+
+}
+
+Page.prototype = {
+    constructor:    Page,
+
+    jsonSyntaxHightlight_toggle:    function() {
+        var debug           = new Debug("Page.jsonSyntaxHighlight_toggle");
+        debug.entering();
+        var JSON_syntaxButton_DOM = document.getElementById("JSON_status");
+        debug.vlog({message: 'before toggle: b_jsonSyntaxHighlight', var: this.b_jsonSyntaxHighlight});
+        this.b_jsonSyntaxHighlight = !this.b_jsonSyntaxHighlight;
+        debug.vlog({message: 'after  toggle: b_jsonSyntaxHighlight', var: this.b_jsonSyntaxHighlight});
+        if(this.b_jsonSyntaxHighlight) {
+            JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: ON';
+            JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-on';
+        }
+        if(!this.b_jsonSyntaxHighlight) {
+            JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: OFF';
+            JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-off';
+        }
+        debug.leaving();
+    },
+    
+    termynal_clear:         function(element) {
+        var str_help = `
+        "clear" an output div element on the page.
+        `;
+        var l_line = ['<span data-ty="input" data-ty-prompt="#">Output from pfdcm appears here...</span>'];
+        this.DOMtermynal.innerHTML_listset(element, l_line);
+    },
+
+    fields_populateFromURL: function() {
+        var str_help = `
+            Populate various fields on the page from URL args
+        `;
+        this.url.parse();
+    }
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------
-// Some "global" variables.
 
-l_urlParams = [   
-    "pfdcm_IP", 
-    "pfdcm_port", 
-    "PACS_IP", 
-    "PACS_port", 
-    "PACS_AET", 
-    "PACS_AEC", 
-    "PACS_AETL",
-    "PACS_name"
-];
+// Page object
+page        = new Page();
 
-l_pfdcm = [
-    "pfdcm_get",
-    "pfdcm_out",
-    "data_pfdcm"
-];
-
-// DOM elements
-DOMurl      = new DOM(l_urlParams);
-DOMpfdcm    = new DOM(l_pfdcm);
-
-// termynal
-// var termynal_pfdcm  = new Termynal('#termynal_pfdcm');
-// var termynal_pacs   = new Termynal('#termynal_pacs');
-
-// Parse URL and populate page elements
-url         = new URL(DOMurl);
-
-post        = new REST( {
+// communication object, which includes the page so that MSG results
+// can be displayed.
+post        = new REST(
+                        {
+                            'page':         page,
                             'VERB':         'POST',
                             'type':         'text',
                             'scheme':       'http',
                             'path':         '/api/v1/cmd/',
-                            'clientAPI':    'Fetch'
-                        })
+                            'clientAPI':    'Fetch',
+                            'MSGdom':       page.d_MSGtermynal
+                        }
+                    );
 
 
 // The whole document
@@ -620,7 +839,7 @@ $body                       = $("body");
 // str_allFeedsBase            = '';
 // str_loginFile               = '';
 // b_URLsBuild                 = true;
-b_jsonSyntaxHighlight       = true;
+// b_jsonSyntaxHighlight       = true;
 b_useFileDB_status          = true;
 b_createNewDB_status        = false;
 b_loginStatus               = false;
@@ -653,24 +872,24 @@ $(".onlythree").keyup(function () {
     }    
 });
 
-function jsonSyntaxHightlight_toggle() {
-    var debug           = new C_debug();
-    debug.functionName  = "jsonSyntaxHighlight_toggle";
-    debug.entering();
-    JSON_syntaxButton_DOM = document.getElementById("JSON_status");
-    debug.vlog({message: 'before toggle: b_jsonSyntaxHighlight', var: b_jsonSyntaxHighlight});
-    b_jsonSyntaxHighlight = !b_jsonSyntaxHighlight;
-    debug.vlog({message: 'after  toggle: b_jsonSyntaxHighlight', var: b_jsonSyntaxHighlight});
-    if(b_jsonSyntaxHighlight) {
-        JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: ON';
-        JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-on';
-    }
-    if(!b_jsonSyntaxHighlight) {
-        JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: OFF';
-        JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-off';
-    }
-    debug.leaving();
-}
+// function jsonSyntaxHightlight_toggle() {
+//     var debug           = new C_debug();
+//     debug.functionName  = "jsonSyntaxHighlight_toggle";
+//     debug.entering();
+//     JSON_syntaxButton_DOM = document.getElementById("JSON_status");
+//     debug.vlog({message: 'before toggle: b_jsonSyntaxHighlight', var: b_jsonSyntaxHighlight});
+//     b_jsonSyntaxHighlight = !b_jsonSyntaxHighlight;
+//     debug.vlog({message: 'after  toggle: b_jsonSyntaxHighlight', var: b_jsonSyntaxHighlight});
+//     if(b_jsonSyntaxHighlight) {
+//         JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: ON';
+//         JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-on';
+//     }
+//     if(!b_jsonSyntaxHighlight) {
+//         JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: OFF';
+//         JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-off';
+//     }
+//     debug.leaving();
+// }
 
 function useFileDB_toggle() {
     var debug           = new C_debug();
@@ -792,6 +1011,6 @@ window.onload = function() {
     // loginStatus_show(file_exist(str_loginURLtag));
 
     // Parse the URL and populate relevant elements on the page
-    url.parse();
+    page.fields_populateFromURL();
 };
 
