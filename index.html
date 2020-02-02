@@ -28,7 +28,7 @@
         <div>
             <!-- Top "navigation" bar -->
             <button class="button-xsmall button-loginStatus-loggedOut pure-button"     id="loginStatus" onclick="loginStatus_toggle()">login status: unknown</button>
-            <button onclick="jsonSyntaxHightlight_toggle()" class="button-xsmall pure-button pure-button-primary button-jsonHighlight-on" id="JSON_status">JSON syntax highlight: ON</button>
+            <button onclick="page.jsonSyntaxHightlight_toggle()" class="button-xsmall pure-button pure-button-primary button-jsonHighlight-on" id="JSON_status">JSON syntax highlight: ON</button>
             <button onclick="useFileDB_toggle()" class="button-xsmall pure-button pure-button-primary button-useFileDB-on" id="useFileDB_status">Use file DB: ON</button>
             <button onclick="createNewDB_toggle()" class="button-xsmall pure-button pure-button-primary button-createNewDB-off" id="createNewDB_status">Create new DB: OFF</button>
 
@@ -91,7 +91,6 @@
                     </div>
                     <div class="pure-control-group">
                         <label>
-                            <!-- <button onclick="return REST_call({'operation': 'pfdcm_detailGet'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">GET pfdcm INTERNAL STATE</button> -->
                             <input type="button" onclick="return post.do({'operation': 'pfdcm_get'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="GET pfdcm INTERNAL STATE"></input>
                         </label>
                         <input style="width:225px;font-family:courier;" id="pfdcm_get" name="pfdcm_get" value="/" />
@@ -102,23 +101,21 @@
                     <legend><tt>pfdcm</tt> Macro Calls</legend>
                     <div class="pure-control-group">
                         <label>
-                            <!-- <button onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">hello</button> -->
+                            <input type="button" onclick="return page.termynal_clear('termynal_pfdcm')" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
+                        </label>
+                        <label>
                             <input type="button" onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="hello"></input>
                         </label>
                     </div>
                 </div>
 
-                <!-- <div style="border:0px groove grey; padding: 5px; width:725px; height:225px;">
-                    <pre style="width:725px; height:225px; background-color:black; color:green;   font: 0.8rem Inconsolata, monospace;" name="pfdcm_out" id="pfdcm_out">
-                    </pre>
-                </div> -->
-
-                <div id="termynal_pfdcm" name="termynal_pfdcm" data-termynal>
-                    <span data-ty id="data_pfdcm" name="data_pfdcm"></span>
+                <div id="termynal_pfdcm" style="font-size: .8em;" name="termynal_pfdcm" data-termynal>
+                    <span data-ty="input" data-ty-prompt="#" id="data_pfdcm" name="data_pfdcm">Output from pfdcm appears here...</span>
                 </div>
+                <br>
 
                 <div style="border:0px groove grey; padding: 5px;">
-                    <legend><br>PACS Detail</legend>
+                    <legend>PACS Detail</legend>
                     <div class="pure-control-group">
                         <label>IP:port</label>
                         <input style="width:525px;font-family:courier;" id="PACS_IP" name="PACS_IP" value=""/>:
@@ -162,6 +159,10 @@
                     </div>
                 </div>
 
+                <div id="termynal_pacs" name="termynal_pacs" style="font-size: .8em;" data-termynal>
+                    <span data-ty="input" id="data_pacs" name="data_pacs">Output from PACS appears here...</span>
+                </div>
+                <br>
 
                 <button onclick="window.location.reload(true)" 
                 class="pure-button pure-button-primary button-reset">Reset</button>
