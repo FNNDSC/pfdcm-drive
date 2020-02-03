@@ -1,39 +1,3 @@
-/* terminal {
-  background-color: black;
-  background-image: radial-gradient(
-    rgba(0, 150, 0, 0.75), black 120%
-  );
-  height: 100vh;
-  margin: 0;
-  overflow: hidden;
-  padding: 2rem;
-  color: white;
-  font: 0.8rem Inconsolata, monospace;
-  text-shadow: 0 0 5px #C8C8C8;
-  &::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(black, 0.15),
-      rgba(black, 0.15) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-    pointer-events: none;
-  }
-}
-::selection {
-  background: #0080FF;
-  text-shadow: none;
-}
-pre {
-  margin: 0;
-} */
 
 h3{
 margin:5px;
@@ -98,6 +62,11 @@ prebox {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
 font-family: courier;
 }
 
+.input-dark {
+    background-color:#555;
+    color: #fff;
+}
+
 .formLayout label
 {
 text-align: right;
@@ -140,6 +109,22 @@ body.loading .modal {
 display: block;
 }
 
+dialog {
+    visibility: hidden;
+    transform: scale(0.1);
+    transition: transform 200ms;
+}
+
+dialog.dialog-scale {
+    visibility: visible;
+    transform: scale(1);
+}
+
+
+
+/*
+Help dialog CSS 
+*/
 .ui-widget.helpInfo-dialog {
 font-family:    Verdana,Arial,sans-serif;
 font-size:      .8em;
@@ -181,6 +166,108 @@ position:       relative;
 font-size:      1em;
 }
 
+/*
+config pfdcm CSS 
+*/
+.ui-widget.config_pfdcm-dialog {
+font-family:    Verdana,Arial,sans-serif;
+font-size:      .8em;
+}
+
+.ui-widget-content.config_pfdcm-dialog {
+/* background:     #F9F9F9;
+color:          #222222; */
+/* background:     #252a33; */
+background:     #353a43;
+color:          #fff;
+border:         1px solid #90d93f;
+border:         0px solid #90d93f;
+}
+    
+.ui-dialog.config_pfdcm-dialog {
+left:           0;
+outline:        0 none;
+padding:        0 !important;
+position:       absolute;
+top:            0;
+}
+
+.ui-dialog.config_pfdcm-dialog .ui-dialog-content {
+background:     none repeat scroll 0 0 transparent;
+border:         0 none;
+overflow:       auto;
+position:       relative;
+padding:        20;
+margin:         0;
+}
+
+.ui-dialog.config_pfdcm-dialog .ui-widget-header {
+/* background:     #b0de78; */
+text-align:     center;
+background:     #454a53;
+border:         0;
+color:          #fff;
+font-weight:    normal;
+font-family:    'Fira Mono', Consolas, Menlo, Monaco, 'Courier New', Courier, monospace;
+}
+
+.ui-dialog.config_pfdcm-dialog .ui-dialog-titlebar {
+padding:        0.1em .5em;
+position:       relative;
+font-size:      1em;
+}
+
+/*
+config PACS CSS 
+*/
+.ui-widget.config_PACS-dialog {
+font-family:    Verdana,Arial,sans-serif;
+font-size:      .8em;
+}
+
+.ui-widget-content.config_PACS-dialog {
+background:     #F9F9F9;
+border:         1px solid #90d93f;
+color:          #222222;
+background:     #353a43;
+color:          #fff;
+border:         1px solid #90d93f;
+border:         0px solid #90d93f;
+}
+    
+.ui-dialog.config_PACS-dialog {
+left:           0;
+outline:        0 none;
+padding:        0 !important;
+position:       absolute;
+top:            0;
+}
+
+.ui-dialog.config_PACS-dialog .ui-dialog-content {
+background:     none repeat scroll 0 0 transparent;
+border:         0 none;
+overflow:       auto;
+position:       relative;
+padding:        20;
+margin:         0;
+}
+
+.ui-dialog.config_PACS-dialog .ui-widget-header {
+text-align:     center;
+background:     #b0de78;
+background:     #454a53;
+border:         0;
+color:          #fff;
+font-weight:    normal;
+font-family:    'Fira Mono', Consolas, Menlo, Monaco, 'Courier New', Courier, monospace;
+}
+
+.ui-dialog.config_PACS-dialog .ui-dialog-titlebar {
+padding:        0.1em .5em;
+position:       relative;
+font-size:      1em;
+}
+    
 .button-xsmall {
     font-size: 70%;
 }
@@ -341,10 +428,208 @@ font-size:      1em;
     float: right;
 }
 
+.button-help-green {
+    color: white;
+    /*border-radius: 4px;*/
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    background: rgb(28, 184, 65); /* this is a green */
+    float: right;
+}
+
 .button-reset {
     background: rgb(223, 117, 20); /* this is an orange */
     display: inline-block;
     position: relative;
     left: 45%;
     /*float: right;*/
+}
+
+
+
+html {
+    box-sizing: border-box;
+}
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+.cf:before, .cf:after {
+    display: table;
+    content: ' ';
+}
+.cf:after {
+    clear: both;
+}
+.cf {
+    *zoom: 1;
+}
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0;
+    color: #555;
+    background-color: #f5f7fa;
+}
+img {
+    max-width: 100%;
+    height: auto;
+}
+figure {
+    margin: 0;
+    padding: 10px;
+}
+figure a {
+    display: block;
+}
+mark {
+    padding: 0 5px;
+    background-color: #ddd;
+}
+::backdrop {
+    background-color: rgba(0,0,0,0.5);
+}
+.btn {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: #555;
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 3px;
+    background-color: #f3f3f3;
+}
+.btn.disabled {
+    cursor: not-allowed;
+    color: #ddd;
+    border-color: #ddd;
+}
+.btn-group {
+    padding: 15px 20px;
+    text-align: right;
+    background-color: #f5f6f8;
+}
+.btn-primary {
+    color: #fff;
+    border-color: #0066c0;
+    background-color: #0074d9;
+}
+.btn-primary:hover {
+    background-color: #0066c0;
+}
+.btn-danger {
+    color: #fff;
+    border-color: #ab3326;
+    background-color: #c0392b;
+}
+.btn-danger:hover {
+    background-color: #ab3326;
+}
+.btn-cancel {
+    color: #999;
+    border-color: #ddd;
+}
+.btn-cancel:hover {
+    background-color: #e6e6e6;
+}
+.site-header {
+    text-align: center;
+    background-color: #196e76;
+}
+.site-header h1, .site-header a {
+    padding: 15px;
+    text-transform: uppercase;
+    color: #fff;
+}
+.site-header h1 {
+    font-size: 18px;
+    margin: 0;
+}
+.site-header a {
+    font-size: 14px;
+    font-weight: 300;
+    display: block;
+    text-decoration: none;
+    background-color: #10474c;
+}
+.boxed-group {
+    width: 90%;
+    max-width: 680px;
+    margin-top: 50px;
+    margin-right: auto;
+    margin-left: auto;
+}
+.boxed-group h3, .boxed-group h4 {
+    font-weight: 400;
+    margin: 0;
+}
+.boxed-group h3 {
+    padding: 12px 20px;
+    color: #fff;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    background-color: #434a54;
+}
+.boxed-group h4 {
+    font-size: 18px;
+    color: #555;
+}
+.boxed-group section {
+    padding: 30px 20px;
+}
+.boxed-group section:first-child {
+    border-bottom: 1px solid #e6e9ed;
+}
+.boxed-group section:only-of-type, .boxed-group section:only-child {
+    border-bottom: 0;
+}
+.boxed-group .boxed-group-inner {
+    font-size: 14px;
+    font-weight: 300;
+    color: #aaa;
+    border-width: 0 1px 1px;
+    border-style: solid;
+    border-color: #e6e9ed;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    background-color: #fff;
+}
+.boxed-group .btn {
+    float: right;
+    margin-left: 20px;
+}
+.site-dialog {
+    overflow: hidden;
+    width: 95%;
+    max-width: 500px;
+    padding: 0;
+    border-width: 0;
+    border-radius: 5px;
+    background: transparent;
+    box-shadow: 0 10px 20px 0 rgba(0,0,0,0.3);
+    visibility: hidden;
+    transform: scale(0.1);
+    transition: transform 200ms;
+}
+.site-dialog.dialog-scale {
+    visibility: visible;
+    transform: scale(1);
+}
+.site-dialog h1 {
+    font-size: 16px;
+    font-weight: normal;
+    margin: 0;
+    color: #fff;
+}
+.site-dialog p {
+    font-size: 14px;
+}
+.site-dialog .dialog-header {
+    padding: 12px 20px;
+    background-color: #434a54;
+}
+.site-dialog .dialog-content {
+    padding: 30px 20px;
+    color: #555;
+    background-color: #fff;
+}
+.site-dialog .dialog-content p:last-of-type, .site-dialog .dialog-content p:only-child {
+    margin-top: 0;
+    margin-bottom: 0;
 }
