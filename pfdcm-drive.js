@@ -389,10 +389,10 @@ MSG.prototype = {
         this.str_DOMkey         = 'termynal_pfdcm';
         this.DOMoutput          = this.d_comms['MSGdom']['dom'];
         d_PACSinfo              = {
-                'IP':               this.page.DOMpacsdetail.get('PACS_IP'), 
-                'aetitle':          this.page.DOMpacsdetail.get('PACS_AET'), 
-                'calledaetitle':    this.page.DOMpacsdetail.get('PACS_AEC'), 
-                'port':             this.page.DOMpacsdetail.get('PACS_port') 
+                'serverIP':         this.page.DOMpacsdetail.get('PACS_IP'), 
+                'aet':              this.page.DOMpacsdetail.get('PACS_AET'), 
+                'aec':              this.page.DOMpacsdetail.get('PACS_AEC'), 
+                'serverPort':       this.page.DOMpacsdetail.get('PACS_port') 
         };
 
         var str_serviceName     = this.page.DOMpacsdetail.get('PACS_name');
@@ -404,8 +404,40 @@ MSG.prototype = {
         var d_msg = {
             "action": "internalctl",
             "meta": {
-                "var":      "/service",
+                "var":      "/PACS",
                 "set":      d_set
+            }
+        };
+
+        let PACS_config         = document.getElementById("config_PACS-opener");
+        PACS_config.innerHTML   = 'Config PACS: Set';
+        PACS_config.className   = 'button-xsmall button-help-green pure-button';
+        
+        return(d_msg);    
+    },
+
+    PACS_query:                  function() {
+        str_help = `
+        Perform a PACS Query.
+        `;
+
+        // Build the schemeAuthPath at message compose since
+        // DOM elements might have changed asynchronously.
+        this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
+        this.str_DOMkey         = 'termynal_pacs';
+        this.DOMoutput          = this.d_comms['MSGdom']['dom'];
+
+        let str_PatientID       = this.page.DOMpacsQR.get('PatientID');
+        var str_serviceName     = this.page.DOMpacsdetail.get('PACS_name');
+
+        var d_msg = {
+            "action": "PACSinteract",
+            "meta": {
+                "do":      "query",
+                "on":      {
+                    "PatientID":    str_PatientID
+                },
+                "PACS":     str_serviceName
             }
         };
         return(d_msg);    
@@ -440,7 +472,6 @@ MSG.prototype = {
 
         // and concat the l_header with the l_body
         var l_lines     = l_header.concat(l_body);
-
         var l_termynal  = [];
         let counter = str => {
             return str.split('').reduce((total, letter) => {
@@ -449,11 +480,18 @@ MSG.prototype = {
             }, {});
           };
 
-        for(var str_line of l_lines) {
+          let str_pad = new Array(1).join('&nbsp;');
+          for(var str_line of l_lines) {
             let hist    = counter(str_line);
             if(' ' in hist) {
                 let count   = hist[' '];
-                let str_pad = new Array(count + 1).join('&nbsp;');
+                str_pad     = new Array(count + 1).join('&nbsp;');
+                if(this.page.b_jsonSyntaxHighlight) 
+                    str_line = str_line.replace('">"', '">' + str_pad + '"');
+                else
+                    str_line = str_pad + str_line;
+            }
+            if('}' in hist) {
                 if(this.page.b_jsonSyntaxHighlight) 
                     str_line = str_line.replace('">"', '">' + str_pad + '"');
                 else
@@ -733,6 +771,13 @@ REST.prototype = {
         this.transmitAndProcess(this.msg.pfdcm_set());
     },
 
+    PACS_query:             function() {
+        var str_help = `
+        Do a PACS Query.
+        `;
+        this.transmitAndProcess(this.msg.PACS_query());
+    },
+
     do:                     function(d_op) {
         if('operation' in d_op) {
             switch(d_op['operation']) {
@@ -741,6 +786,8 @@ REST.prototype = {
                 case 'pfdcm_get':   this.pfdcm_get();
                                     break;
                 case 'pfdcm_set':   this.pfdcm_set();
+                                    break;
+                case 'PACS_query':  this.PACS_query();
                                     break;
             }
         }
@@ -773,7 +820,8 @@ function Page() {
         "PACS_AET", 
         "PACS_AEC", 
         "PACS_AETL",
-        "PACS_name"
+        "PACS_name",
+        "PatientID"
     ];
 
     this.l_PACSdetail   = [
@@ -792,6 +840,16 @@ function Page() {
         "data_pfdcm"
     ];
 
+    // DOM keys related to the PACS Q/R parts of the page
+    this.l_PACSQR   = [
+        "PatientID",
+        "PatientName",
+        "AccessionNumber",
+        "StudyDate",
+        "Modality",
+        "PerformedStationAETitle"
+    ]
+
     // DOM keys related to termynal parts of the page
     this.l_termynal = [
         "termynal_pfdcm",
@@ -803,6 +861,7 @@ function Page() {
     this.DOMurl         = new DOM(this.l_urlParams);
     this.DOMpfdcm       = new DOM(this.l_pfdcm);
     this.DOMpacsdetail  = new DOM(this.l_PACSdetail);
+    this.DOMpacsQR      = new DOM(this.l_PACSQR);
     this.DOMtermynal    = new DOM(this.l_termynal)
 
     this.url            = new URL(this.DOMurl);
@@ -811,6 +870,58 @@ function Page() {
         'element':  this.l_termynal,
         'dom':      this.DOMtermynal
     };
+
+    var $accountDelete       = $('#delete-account'),
+    $accountDeleteDialog     = $('#confirm-delete'),
+    transition;
+
+    $accountDelete.on('click', function() {
+        console.log("here!!");
+        $accountDeleteDialog[0].showModal();
+        transition = setTimeout(function() {
+            $accountDeleteDialog.addClass('dialog-scale');
+        }, 0.5);
+    });
+
+    $('#cancel').on('click', function() {
+        $accountDeleteDialog[0].close();
+        $accountDeleteDialog.removeClass('dialog-scale');
+        clearTimeout(transition);
+    });
+
+    $( "#helpInfo" ).dialog({
+        autoOpen:       false,
+        height:         520,
+        width:          500,
+        dialogClass:    'helpInfo-dialog'
+    });
+    
+    $( "#help-opener" ).click(function() {
+        $( "#helpInfo" ).dialog( "open" );
+    });
+
+    $( "#config_pfdcm" ).dialog({
+        autoOpen:       false,
+        height:         520,
+        width:          800,
+        dialogClass:    'config_pfdcm-dialog'
+    });
+    
+    $( "#config_pfdcm-opener" ).click(function() {
+        $( "#config_pfdcm" ).dialog( "open" );
+    });
+
+    $( "#config_PACS" ).dialog({
+        autoOpen:       false,
+        height:         220,
+        width:          800,
+        dialogClass:    'config_PACS-dialog'
+    });
+    
+    $( "#config_PACS-opener" ).click(function() {
+        $( "#config_PACS" ).dialog( "open" );
+});
+
 
 }
 
@@ -830,7 +941,7 @@ Page.prototype = {
         }
         if(!this.b_jsonSyntaxHighlight) {
             JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: OFF';
-            JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-off';
+            JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-on';
         }
         debug.leaving();
     },
@@ -839,7 +950,14 @@ Page.prototype = {
         var str_help = `
         "clear" an output div element on the page.
         `;
-        var l_line = ['<span data-ty="input" data-ty-prompt="#">Output from pfdcm appears here...</span>'];
+        let str_line    = '';
+        if(element == 'termynal_pfdcm') {
+            str_line = '<span data-ty="input" data-ty-prompt="#">Output from pfdcm appears here...</span>';
+        }
+        if(element == 'termynal_pacs') {
+            str_line = '<span data-ty="input" data-ty-prompt="#">Output from PACS appears here...</span>';
+        }
+        var l_line = [str_line];
         this.DOMtermynal.innerHTML_listset(element, l_line);
     },
 
@@ -907,41 +1025,12 @@ $(document).on({
     ajaxStop:   function() { $body.removeClass("loading"); }
 });
 
-$( "#helpInfo" ).dialog({
-    autoOpen:       false,
-    height:         520,
-    width:          500,
-    dialogClass:    'helpInfo-dialog'
-});
-
-$( "#opener" ).click(function() {
-    $( "#helpInfo" ).dialog( "open" );
-});
 
 $(".onlythree").keyup(function () {    
     if (this.value.length == this.maxLength) {    
         $(this).next('.onlythree').focus();    
     }    
 });
-
-// function jsonSyntaxHightlight_toggle() {
-//     var debug           = new C_debug();
-//     debug.functionName  = "jsonSyntaxHighlight_toggle";
-//     debug.entering();
-//     JSON_syntaxButton_DOM = document.getElementById("JSON_status");
-//     debug.vlog({message: 'before toggle: b_jsonSyntaxHighlight', var: b_jsonSyntaxHighlight});
-//     b_jsonSyntaxHighlight = !b_jsonSyntaxHighlight;
-//     debug.vlog({message: 'after  toggle: b_jsonSyntaxHighlight', var: b_jsonSyntaxHighlight});
-//     if(b_jsonSyntaxHighlight) {
-//         JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: ON';
-//         JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-on';
-//     }
-//     if(!b_jsonSyntaxHighlight) {
-//         JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: OFF';
-//         JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-off';
-//     }
-//     debug.leaving();
-// }
 
 function useFileDB_toggle() {
     var debug           = new C_debug();
