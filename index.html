@@ -21,8 +21,10 @@
 </head>
 
 <body>
-    <h2 class="formLayout">Interacting with a <tt>pfdcm</tt> server instance</h2>
-
+    <div>
+        <h2 class="formLayout">Interacting with a <tt>pfdcm</tt> server instance</h2>
+    </div>
+    
     <div class="formLayout">
 
         <div>
@@ -32,12 +34,12 @@
             <button onclick="useFileDB_toggle()" class="button-xsmall pure-button pure-button-primary button-useFileDB-on" id="useFileDB_status">Use file DB: ON</button>
             <button onclick="createNewDB_toggle()" class="button-xsmall pure-button pure-button-primary button-createNewDB-off" id="createNewDB_status">Create new DB: OFF</button>
 
-            <div class="pure-control-group">
+            <!-- <div class="pure-control-group">
                 <label>
                     <button class="button-xsmall pure-button pure-button-primary button-createNewDB-feedsLabel" style="visibility: hidden;" id="createNewDB_feedsLabel">Feeds</button>
                 </label>
                 <input style="width:30px;font-family:courier;font-size:90%;padding-top:0.5em;padding-left:0em;float:left;visibility:hidden;" type="text" maxlength="3" class="onlythree" id="createNewDB_feedsVal" value="4"/>
-            </div>
+            </div> -->
 
             <button class="button-xsmall button-help   pure-button"     id="opener">help</button>
             <br>
@@ -133,8 +135,8 @@
                     </div>
                     <div class="pure-control-group">
                         <label>
-                            <button onclick="return REST_call({'operation': 'pacs_set'})" style="float: left;" class="pure-button pure-button-primary button-xsmall">SET PACS INFO within pfdcm</button>
-                        </labelclass="pure-input-1-2" id="URLsFromChRIS" style="width:595px;">
+                            <input type="button" onclick="return post.do({'operation': 'pfdcm_set'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="SET PACS INFO within pfdcm"></input>
+                        </labelclass="pure-input-1-2" id="pfdcm_set" style="width:595px;">
                         </select>
                     </div>
                 </div>
