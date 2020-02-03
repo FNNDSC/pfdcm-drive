@@ -378,6 +378,39 @@ MSG.prototype = {
         return(d_msg);    
     },
 
+    pfdcm_set:                  function() {
+        str_help = `
+        Set the 'pfdcm' PACS detail based on page input data fields.
+        `;
+
+        // Build the schemeAuthPath at message compose since
+        // DOM elements might have changed asynchronously.
+        this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
+        this.str_DOMkey         = 'termynal_pfdcm';
+        this.DOMoutput          = this.d_comms['MSGdom']['dom'];
+        d_PACSinfo              = {
+                'IP':               this.page.DOMpacsdetail.get('PACS_IP'), 
+                'aetitle':          this.page.DOMpacsdetail.get('PACS_AET'), 
+                'calledaetitle':    this.page.DOMpacsdetail.get('PACS_AEC'), 
+                'port':             this.page.DOMpacsdetail.get('PACS_port') 
+        };
+
+        var str_serviceName     = this.page.DOMpacsdetail.get('PACS_name');
+
+        d_set   = {
+            [str_serviceName]: d_PACSinfo
+        };
+
+        var d_msg = {
+            "action": "internalctl",
+            "meta": {
+                "var":      "/service",
+                "set":      d_set
+            }
+        };
+        return(d_msg);    
+    },
+
     to_termynal:                function() {
         str_help = `
             Convert a multi-line response string to termynal
@@ -693,12 +726,21 @@ REST.prototype = {
         this.transmitAndProcess(this.msg.pfdcm_get());
     },
 
+    pfdcm_set:              function() {
+        var str_help = `
+        Set pfdcm internals based on the contents of page input fields.
+        `;
+        this.transmitAndProcess(this.msg.pfdcm_set());
+    },
+
     do:                     function(d_op) {
         if('operation' in d_op) {
             switch(d_op['operation']) {
                 case 'hello':       this.hello();
                                     break;
                 case 'pfdcm_get':   this.pfdcm_get();
+                                    break;
+                case 'pfdcm_set':   this.pfdcm_set();
                                     break;
             }
         }
@@ -734,6 +776,15 @@ function Page() {
         "PACS_name"
     ];
 
+    this.l_PACSdetail   = [
+        "PACS_IP", 
+        "PACS_port", 
+        "PACS_AET", 
+        "PACS_AEC", 
+        "PACS_AETL",
+        "PACS_name"
+    ];
+
     // DOM keys related to the pfdcm parts of the page
     this.l_pfdcm = [
         "pfdcm_get",
@@ -751,6 +802,7 @@ function Page() {
     //                      access functionality
     this.DOMurl         = new DOM(this.l_urlParams);
     this.DOMpfdcm       = new DOM(this.l_pfdcm);
+    this.DOMpacsdetail  = new DOM(this.l_PACSdetail);
     this.DOMtermynal    = new DOM(this.l_termynal)
 
     this.url            = new URL(this.DOMurl);
