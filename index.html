@@ -22,7 +22,7 @@
 
 <body>
     <div>
-        <h2 class="formLayout">Interacting with a <tt>pfdcm</tt> server instance</h2>
+        <h2 class="formLayout">PACS Q/R using a ChRIS <tt>pfdcm</tt> service</h2>
     </div>
         
     <div class="formLayout">
@@ -31,8 +31,9 @@
             <!-- Top "navigation" bar -->
             <button class="button-xsmall button-loginStatus-loggedOut pure-button"     id="loginStatus" onclick="loginStatus_toggle()">login status: unknown</button>
             <button onclick="page.jsonSyntaxHightlight_toggle()" class="button-xsmall pure-button pure-button-primary button-jsonHighlight-on" id="JSON_status">JSON syntax highlight: ON</button>
-            <button onclick="useFileDB_toggle()" class="button-xsmall pure-button pure-button-primary button-useFileDB-on" id="useFileDB_status">Use file DB: ON</button>
-            <button onclick="createNewDB_toggle()" class="button-xsmall pure-button pure-button-primary button-createNewDB-off" id="createNewDB_status">Create new DB: OFF</button>
+
+            <!-- <button onclick="useFileDB_toggle()" class="button-xsmall pure-button pure-button-primary button-useFileDB-on" id="useFileDB_status">Use file DB: ON</button>
+            <button onclick="createNewDB_toggle()" class="button-xsmall pure-button pure-button-primary button-createNewDB-off" id="createNewDB_status">Create new DB: OFF</button> -->
 
             <!-- <div class="pure-control-group">
                 <label>
@@ -42,7 +43,7 @@
             </div> -->
 
             <button class="button-xsmall button-help   pure-button" id="help-opener">help</button>
-            <button class="button-xsmall button-help   pure-button" id="config_pfdcm-opener">Config pfdcm</button>
+            <button class="button-xsmall button-help   pure-button" id="config_pfdcm-opener">Check pfdcm</button>
             <button class="button-xsmall button-help   pure-button" id="config_PACS-opener">Config PACS</button>
             <br>
         </div>
@@ -105,7 +106,7 @@
                         <legend><tt>pfdcm</tt> Macro Calls</legend>
                         <div class="pure-control-group">
                             <label>
-                                <input type="button" onclick="return page.termynal_clear('termynal_pfdcm')" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
+                                <input type="button" onclick="return page.pfdcm_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
                             </label>
                             <label>
                                 <input type="button" onclick="return post.do({'operation': 'hello'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="hello"></input>
@@ -113,8 +114,12 @@
                         </div>
                     </div>
 
-                    <div id="termynal_pfdcm" style="font-size: .8em;" name="termynal_pfdcm" data-termynal data-ty-cursor="_">
-                        <span data-ty="input" data-ty-prompt="#" id="data_pfdcm" name="data_pfdcm">Output from pfdcm appears here...</span>
+                    <div id="termynal_pfdcm" style="font-size: 1em;" name="termynal_pfdcm" data-termynal data-ty-cursor="_">
+                        <span data-ty="input" data-ty-typeDelay="20" style="color: lightgreen;" data-ty-prompt="#///">Send a 'hello' to verify that 'pfdcm' is in fact alive and responsive.</span>
+                        <span data-ty="input" data-ty-typeDelay="20" style="color: lightgreen;" data-ty-prompt="#///">Internal state of 'pfdcm' is expressed as a tree structure rooted at '/'.</span>
+                        <span data-ty="input" data-ty-typeDelay="20" style="color: yellow;" data-ty-prompt="#///">You can examine any part of the 'tree' by specifying an appropriate 'path' above and hitting 'GET pfdcm INTERNAL'.</span>
+                        <span data-ty="input" data-ty-typeDelay="40" data-ty-prompt="#///">Output from 'pfdcm' appears here.</span>
+                        <span data-ty="input" data-ty-typeDelay="40" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
                     </div>
                 </fieldset>
             </form>
@@ -171,7 +176,7 @@
                     </div>
                     <div class="pure-control-group">
                         <label>
-                            <input type="button" onclick="return page.termynal_clear('termynal_pacs')" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
+                            <input type="button" onclick="return page.PACS_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
                         </label>
                         <label>
                             <input type="button" onclick="return post.do({'operation': 'PACS_query'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="QUERY"></input>
@@ -182,7 +187,8 @@
 
                 <div id="termynal_pacs" name="termynal_pacs" style="font-size: .8em;" data-termynal data-termynal data-ty-cursor="_">
                     <span data-ty="input" data-ty-typeDelay="20" style="color: lightgreen;" data-ty-prompt="#///">Make sure you have done a 'Config PACS' -- see the button top right.</span>
-                    <span data-ty="input" data-ty-typeDelay="20" style="color: lightgreen;" data-ty-prompt="#///">Use 'Config pfdcm' to set interact with the pfdcm server.</span>
+                    <span data-ty="input" data-ty-typeDelay="20" style="color: lightgreen;" data-ty-prompt="#///">Use 'Check pfdcm' to see internal pfdcm server state.</span>
+                    <span data-ty="input" data-ty-typeDelay="20" style="color: yellow;" data-ty-prompt="#///">Input your search parameters above and hit "QUERY".</span>
                     <span data-ty="input" data-ty-typeDelay="40" data-ty-prompt="#///">Output from PACS Q/R appears here.</span>
                     <span data-ty="input" data-ty-typeDelay="40" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
                 </div>
