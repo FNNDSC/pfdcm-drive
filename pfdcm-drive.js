@@ -477,6 +477,11 @@ MSG.prototype = {
         let str_serviceName     = this.page.DOMpacsdetail.get('PACS_name');
         let d_on                = this.queryFields_determine();
 
+        this.page.PACS_TERMynal.clear([
+            '<span data-ty>... PERFORMING QUERY ...</span>',
+            '<span data-ty>... Please be patient while running ...</span>'
+        ]);
+
         let d_msg = {
             "action": "PACSinteract",
             "meta": {
@@ -496,7 +501,6 @@ MSG.prototype = {
         if(this.str_DOMkey == 'termynal_pacs') {
             this.page.PACS_TERMynal.response_print(pfresponse)
         }
-
     }
 }
 
@@ -885,7 +889,7 @@ TERMynal.prototype = {
         });
     },
 
-    to_termynalResponseGenerate_fromText:   function(str_text, astr_style) {
+    to_termynalResponseGenerate_fromText:   function(str_text, ab_trimLeft, astr_style) {
         let str_help = `
 
             Prepare a list containing all the lines that should be
@@ -915,10 +919,7 @@ TERMynal.prototype = {
                 break;
         }
 
-        for(let str_line of l_response) {
-            str_line        = str_line.replace(/ /g, "&nbsp;")
-            l_termynal.push("<span data-ty " + str_style + ">" + str_line + "</span>");
-       }
+        l_termynal = this.sprintf(l_response, ab_trimLeft, astr_style);
         return(l_termynal);
     },
 
@@ -980,6 +981,73 @@ TERMynal.prototype = {
         return(l_termynal);
     },
 
+    sprintf:                    function(al_lines, ab_trimLeft, astr_groupStyle) {
+        let str_help = `
+
+            A simple method that takes a list of "lines" and makes them
+            termynal friendly.
+
+        `;
+
+        let str_groupStyle  = '';
+
+        if (typeof (astr_groupStyle) != 'undefined')
+            str_groupStyle = astr_groupStyle;
+        if (typeof (astr_groupStyle) === 'string')
+            str_groupStyle = astr_groupStyle;
+
+        let l_termynal  = [];
+        for(str_line of al_lines) {
+            if(str_line.length) {
+                if(ab_trimLeft) 
+                    str_line    = str_line.trimStart();
+                str_line        = str_line.replace(/ /g, "&nbsp;");
+                l_termynal.push("<span data-ty " + str_groupStyle +" >" + str_line + "</span>");
+            }                
+        }
+        // this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
+        return(l_termynal);
+    },
+
+    ltag_wrap:                  function(astr_prefix, al_lines, astr_suffix) {
+        let str_help = `
+
+            Wrap around each line in <al_lines>, creating a new string:
+
+                <astr_prefix><str_line><astr_suffix>
+
+            Some character substitution is performed. If the <astr_prefix>
+            contains:
+
+                '&':        replaced by the current study index
+                '%':        replaced by the current series index
+
+        `;
+
+        let l_termynal  = [];
+        let seriesCount = 1;
+        let str_prefix  = astr_prefix;
+        for(str_line of al_lines) {
+            str_currentStudy    = (this.currentStudyIndex+1).toString().padStart(4, ' ');
+            str_prefix = str_prefix.replace('/StudyIndex/', str_currentStudy);
+            str_seriesCount     = (seriesCount).toString().padStart(2, '0');
+            str_prefix = str_prefix.replace('/SeriesCount/', str_seriesCount);
+            l_termynal.push(str_prefix + str_line + astr_suffix);
+            seriesCount++;
+            str_prefix = astr_prefix;
+        }
+        return(l_termynal);
+    },
+
+    tprintf:                    function(al_lines, astr_groupStyle) {
+        let str_help = `
+
+            A simple method that takes a list of "lines" and "prints"
+            them in a termynal.
+
+        `;
+        this.DOMoutput.innerHTML_listadd(this.str_DOMkey, al_lines);
+    }
 }
 
 /////////
@@ -1021,28 +1089,94 @@ function TERMynal_PACS(str_DOMkey, DOMoutput, d_settings) {
     `;
 
     TERMynal.call(this, str_DOMkey, DOMoutput, d_settings);
+    this.currentStudyIndex              = 0;
+    this.totalNumberOfStudies           = 0;
 }
 
-TERMynal_PACS.prototype                = Object.create(TERMynal.prototype);
-TERMynal_PACS.prototype.constructor    = TERMynal_pfdcm;
-TERMynal_PACS.prototype.response_print = function(pfresponse) {
+TERMynal_PACS.prototype                 = Object.create(TERMynal.prototype);
+TERMynal_PACS.prototype.constructor     = TERMynal_pfdcm;
+
+TERMynal_PACS.prototype.pfresponseError_show    = function(pfresponse) {
+    let str_help = `
+
+        A simple method for reporting errors in the PACS interaction.
+
+    `;
+
+    let json_response   = pfresponse.json_response;
+    let str_errorMsg    = json_response.msg;
+    let str_suggest;
+
+    this.clear([]);
+
+    if(str_errorMsg == 'Invalid PACS specified.') {
+        str_suggest     = "Please very PACS settings using the 'Config PACS' button";
+    }
+
+    l_termynal          = [
+        '<span data-ty style="color:red;">An error was caught in the PACS interaction!</span>',
+        '<span data-ty style="color:red;">Reported issue was:</span>',
+        '<span data-ty style="color:yellow;">' + str_errorMsg + '</span>',
+        '<span data-ty style="color:yellow;">' + str_suggest + '</span>',
+    ];
+    this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
+}
+
+TERMynal_PACS.prototype.response_print          = function(pfresponse) {
     let str_help = `
 
         PACS - specific TERMynal response handling.
 
+        The input <pfresponse> is typically the response from the remote query.
+        However, for a response with many "hits", an integer can be passed 
+        which denotes a specific "hit" in the response to display.
+
     `;
 
-    this.contents               = pfresponse;
+    switch(typeof(pfresponse)) {
+        case    'undefined':    break;
+        case    'object':       this.contents           = pfresponse;
+                                break;
+        case    'number':       this.currentStudyIndex  = pfresponse;
+                                break;
+    };
+      
+    if(!this.contents.json_response.status) {
+        this.pfresponseError_show(this.contents);
+    } else {
+        this.totalNumberOfStudies   = this.contents.json_response.query.report.rawText.length;
+        this.clear([]);
+        const d_report          = this.contents.json_response.query.report.rawText[this.currentStudyIndex];
+        let l_nav = [
+            '[right]: Next Study     [left]:  Previous Study',
+            '[up]:    First Study    [down]:  Last Study'
+        ];
+        let l_position          = [
+            '                                 ---> Showing Study ' + (this.currentStudyIndex+1) + '/' + this.totalNumberOfStudies + ' <---',
+        ];
+        let lt_nav              = this.sprintf(l_nav, false,      'style="color: lightgreen;"');
+        let lt_position         = this.sprintf(l_position, false, 'style="color: fuchsia;"');
+        let str_header          = d_report['header'];
+        let str_body            = d_report['body'];
+        let l_termynalHeader    = this.to_termynalResponseGenerate_fromText(str_header, false, 'style="color: yellow;"');
+        let l_termynalBody      = this.to_termynalResponseGenerate_fromText(str_body,   true,  'style="color: cyan;"')
 
-    for(const d_report of pfresponse.json_response.query.report.rawText) {
-        str_header              = d_report['header'];
-        str_body                = d_report['body'];
-        let l_termynalHeader    = this.to_termynalResponseGenerate_fromText(str_header, 'style="color: yellow;"');
-        let l_termynalBody      = this.to_termynalResponseGenerate_fromText(str_body, 'style="color: cyan;"')
-        this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynalHeader);
-        this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynalBody);
+        str_button              = `<input type="button" value="/StudyIndex/./SeriesCount/" 
+                                    style="padding: .1em .4em;" 
+                                    class="pure-button 
+                                           pure-button-primary 
+                                           button-xxsmall>`;
+        ltwrap_body             = this.ltag_wrap(
+            '<span style="display: inline-block;">' + str_button,
+            l_termynalBody,
+            '</input></span>'
+        );
+        this.tprintf(lt_nav);
+        this.tprintf(lt_position);
+        this.tprintf(l_termynalHeader);
+        // this.tprintf(l_termynalBody);
+        this.tprintf(ltwrap_body);
     }
-
 }
 
 /////////
@@ -1060,7 +1194,7 @@ function Page() {
     `;
 
     this.b_jsonSyntaxHighlight      = true;
-
+    document.onkeydown              = this.checkForArrowKeyPress;
 
     // DOM keys grouped logically
     this.l_urlParamsBasic = [   
@@ -1213,6 +1347,99 @@ function Page() {
 
 Page.prototype = {
     constructor:    Page,
+
+    rightArrow_process:             function() {
+        let str_help = `
+
+            Process a right arrow event -- this should,
+            if a PACS QUERY has been performed, advance
+            to the next study in the returned QUERY.
+
+        `;
+
+        index = this.PACS_TERMynal.currentStudyIndex+1;
+        if(index >= this.PACS_TERMynal.totalNumberOfStudies)
+            index = 0;
+
+        this.PACS_TERMynal.response_print(index);
+    },
+
+    leftArrow_process:             function() {
+        let str_help = `
+
+            Process a left arrow event -- this should,
+            if a PACS QUERY has been performed, advance
+            to the previous study in the returned QUERY.
+
+        `;
+
+        index = this.PACS_TERMynal.currentStudyIndex-1;
+        if(index < 0)
+            index = this.PACS_TERMynal.totalNumberOfStudies-1;
+
+        this.PACS_TERMynal.response_print(index);
+    },
+
+    upArrow_process:                function() {
+        let str_help = `
+
+            Process an up arrow event -- this should,
+            if a PACS QUERY has been performed, advance
+            to the first study in the returned QUERY.
+
+        `;
+
+        index = 0;
+        this.PACS_TERMynal.response_print(index);
+    },
+
+    downArrow_process:                function() {
+        let str_help = `
+
+            Process a down arrow event -- this should,
+            if a PACS QUERY has been performed, advance
+            to the very last study in the returned QUERY.
+
+        `;
+
+        index = this.PACS_TERMynal.totalNumberOfStudies-1;
+        this.PACS_TERMynal.response_print(index);
+    },
+
+    checkForArrowKeyPress:          function(e) {
+        let str_help = `
+
+            The 'this' seems confused at this point. My guess is that
+            since the event is defined on the "document" the 'this' 
+            retains that identify when executing here. 
+
+            Hence, we call the 'page' variable explicitly when resolving
+            scope.
+
+        `;
+
+        e = e || window.event;
+
+        if (e.keyCode == '38') {
+            console.log('up arrow')
+            page.upArrow_process();
+            // up arrow
+        }
+        else if (e.keyCode == '40') {
+            console.log('down arrow')
+            page.downArrow_process();
+            // down arrow
+        }
+        else if (e.keyCode == '37') {
+            console.log('left arrow')
+            page.leftArrow_process();
+           // left arrow
+        }
+        else if (e.keyCode == '39') {
+            console.log('right arrow')
+            page.rightArrow_process();
+        }
+    },
 
     jsonSyntaxHightlight_toggle:    function() {
         let debug           = new Debug("Page.jsonSyntaxHighlight_toggle");
