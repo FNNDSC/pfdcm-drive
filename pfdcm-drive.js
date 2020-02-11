@@ -862,7 +862,7 @@ TERMynal.prototype = {
         this.page.DOMtermynal.innerHTML_listset(this.str_DOMkey, l_lines);
     },
 
-    syntaxHighlight:            function(json) {
+    syntaxHighlight:            function(json, ab_subSpaces = false) {
         let str_help = `
 
             Convert an input string to colorized html string suitable
@@ -870,8 +870,9 @@ TERMynal.prototype = {
             split into a list!
 
         `;
-
-        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if(ab_subSpaces) 
+            json    = json.replace(/ /g, "&nbsp;");
+        json    = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
             let cls = 'number';
             if (/^"/.test(match)) {
@@ -919,11 +920,11 @@ TERMynal.prototype = {
                 break;
         }
 
-        l_termynal = this.sprintf(l_response, ab_trimLeft, astr_style);
+        l_termynal = this.sprintf(l_response, ab_trimLeft, str_style);
         return(l_termynal);
     },
 
-    to_termynalResponseGenerate:    function(pfresponse) {
+    to_termynalResponseGenerate:    function(pfresponse, astr_style) {
         let str_help = `
 
             Prepare a list containing all the lines that should be
@@ -940,48 +941,40 @@ TERMynal.prototype = {
             has been 
 
         `;
+        let str_style   = '';
+        switch(typeof(astr_style)) {
+            case    'undefined':
+                break;
+            case    'string':
+                str_style   = astr_style;
+                break;
+        }
 
         // The array to hold all the lines for the termynal
-        let l_termynal  = [];
+        let l_termynal      = [];
+        let b_subSpaces     = false;
+        let b_trimLeft      = false;
 
         // Check for optional JSON syntax highlighting. If true, 
         // then the response body needs to be syntaxed -- as a 
         // string, and then split back into a list.
         if(this.page.b_jsonSyntaxHighlight) {
-            str_jsonColorized   = this.syntaxHighlight(pfresponse.str_bodyResponse);
+            b_subSpaces         = true;
+            str_jsonColorized   = this.syntaxHighlight(pfresponse.str_bodyResponse, b_subSpaces);
+            str_jsonColorized   = str_jsonColorized.replace(/&amp;/g, "&");
+
             pfresponse.response_bodyStringUpdate(str_jsonColorized);
         }
 
-        let l_response  = pfresponse.str_response.split('\n')
-
-        let counter = str => {
-            return str.split('').reduce((total, letter) => {
-              total[letter] ? total[letter]++ : total[letter] = 1;
-              return total;
-            }, {});
-          };
-
-        let str_pad = new Array(1).join('&nbsp;');
-        for(let str_line of l_response) {
-            // str_line        = str_line.replace(/ /g, "&nbsp;")
-            let hist    = counter(str_line);
-            if(' ' in hist) {
-                let count   = hist[' '];
-                str_pad     = new Array(count + 1).join('&nbsp;');
-                if(this.page.b_jsonSyntaxHighlight) 
-                    str_line = str_line.replace('">"', '">' + str_pad + '"');
-                else
-                    str_line = str_pad + str_line;
-            }
-            if('}' in hist) {
-                str_line = str_pad + str_line;
-            }
-            l_termynal.push("<span data-ty>" + str_line + "</span>");
-       }
+        b_subSpaces     = false;
+        l_termynal      = this.sprintf(pfresponse.l_response, b_trimLeft, '', b_subSpaces);
         return(l_termynal);
     },
 
-    sprintf:                    function(al_lines, ab_trimLeft, astr_groupStyle) {
+    sprintf:                    function(al_lines, 
+                                            ab_trimLeft         = false, 
+                                            astr_groupStyle     = '',
+                                            ab_subSpaces        = true) {
         let str_help = `
 
             A simple method that takes a list of "lines" and makes them
@@ -989,27 +982,58 @@ TERMynal.prototype = {
 
         `;
 
-        let str_groupStyle  = '';
-
-        if (typeof (astr_groupStyle) != 'undefined')
-            str_groupStyle = astr_groupStyle;
-        if (typeof (astr_groupStyle) === 'string')
-            str_groupStyle = astr_groupStyle;
-
         let l_termynal  = [];
         for(str_line of al_lines) {
             if(str_line.length) {
-                if(ab_trimLeft) 
-                    str_line    = str_line.trimStart();
-                str_line        = str_line.replace(/ /g, "&nbsp;");
-                l_termynal.push("<span data-ty " + str_groupStyle +" >" + str_line + "</span>");
+                if(ab_trimLeft)  str_line    = str_line.trimStart();
+                if(ab_subSpaces) str_line    = str_line.replace(/ /g, "&nbsp;");
+                l_termynal.push("<span data-ty " + astr_groupStyle +" >" + str_line + "</span>");
             }                
         }
-        // this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
         return(l_termynal);
     },
 
-    ltag_wrap:                  function(astr_prefix, al_lines, astr_suffix) {
+    ltag_wrapLineGroup:         function(astr_prefix, al_lines, astr_suffix) {
+        let str_help = `
+
+            Wrap around the list of lines in <al_lines>, creating a new list:
+
+            [
+                <astr_prefix>,
+                [<al_lines>]
+                <astr_suffix>,
+            ]
+        `;
+
+        let l_termynal  = [];
+        l_termynal.push(astr_prefix);
+        l_termynal      = l_termynal.concat(al_lines);
+        l_termynal.push(astr_suffix);
+        return(l_termynal);
+    },
+
+
+    lineBlock_packageAndStyle:  function(al_line, 
+                                            astr_groupStyle     = '"', 
+                                            astr_elementOpen    = '', 
+                                            astr_elementClose   = '') {
+        let str_help = `
+    
+            Wraps a block of TERMynal lines in a div block with styling to
+            reduce the height and apply optional additional styling.
+    
+        `;
+
+        let l_divBlock      = '';
+        l_divBlock          = this.ltag_wrapEachLine(
+            '<div style="display: flex; height:20px;' + astr_groupStyle + '>' + astr_elementOpen,
+            al_line,
+            astr_elementClose + '</div>'
+        );
+        return(l_divBlock);
+    },
+    
+    ltag_wrapEachLine:          function(astr_prefix, al_lines, astr_suffix) {
         let str_help = `
 
             Wrap around each line in <al_lines>, creating a new string:
@@ -1039,13 +1063,14 @@ TERMynal.prototype = {
         return(l_termynal);
     },
 
-    tprintf:                    function(al_lines, astr_groupStyle) {
+    tprintf:                    function(al_lines) {
         let str_help = `
 
             A simple method that takes a list of "lines" and "prints"
             them in a termynal.
 
         `;
+
         this.DOMoutput.innerHTML_listadd(this.str_DOMkey, al_lines);
     }
 }
@@ -1073,8 +1098,9 @@ TERMynal_pfdcm.prototype.response_print = function(pfresponse) {
 
     `;
     this.contents               = pfresponse;
-    let l_termynal              = this.to_termynalResponseGenerate(pfresponse);
-    this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
+    let l_termynal              = this.to_termynalResponseGenerate(pfresponse,
+                                        'style = "padding: 0px 0px;"');
+    this.tprintf(l_termynal);
 }
 
 /////////
@@ -1122,6 +1148,7 @@ TERMynal_PACS.prototype.pfresponseError_show    = function(pfresponse) {
     this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
 }
 
+
 TERMynal_PACS.prototype.response_print          = function(pfresponse) {
     let str_help = `
 
@@ -1146,35 +1173,46 @@ TERMynal_PACS.prototype.response_print          = function(pfresponse) {
     } else {
         this.totalNumberOfStudies   = this.contents.json_response.query.report.rawText.length;
         this.clear([]);
-        const d_report          = this.contents.json_response.query.report.rawText[this.currentStudyIndex];
+        const d_report              = this.contents.json_response.query.report.rawText[this.currentStudyIndex];
         let l_nav = [
-            '[right]: Next Study     [left]:  Previous Study',
-            '[up]:    First Study    [down]:  Last Study'
+            '[up]:    First Study                                   [right]:       Next Study',
+            '[down]:  Last Study                                    [left]:    Previous Study',
+            ' '
         ];
         let l_position          = [
-            '                                 ---> Showing Study ' + (this.currentStudyIndex+1) + '/' + this.totalNumberOfStudies + ' <---',
+            'Showing Study ' + (this.currentStudyIndex+1) + '/' + this.totalNumberOfStudies,
         ];
-        let lt_nav              = this.sprintf(l_nav, false,      'style="color: lightgreen;"');
-        let lt_position         = this.sprintf(l_position, false, 'style="color: fuchsia;"');
-        let str_header          = d_report['header'];
-        let str_body            = d_report['body'];
-        let l_termynalHeader    = this.to_termynalResponseGenerate_fromText(str_header, false, 'style="color: yellow;"');
-        let l_termynalBody      = this.to_termynalResponseGenerate_fromText(str_body,   true,  'style="color: cyan;"')
 
-        str_button              = `<input type="button" value="/StudyIndex/./SeriesCount/" 
+        let str_buttonStudy     = `<input type="button" value=" &#xf019 /StudyIndex/ " 
                                     style="padding: .1em .4em;" 
                                     class="pure-button 
                                            pure-button-primary 
-                                           button-xxsmall>`;
-        ltwrap_body             = this.ltag_wrap(
-            '<span style="display: inline-block;">' + str_button,
-            l_termynalBody,
-            '</input></span>'
-        );
-        this.tprintf(lt_nav);
-        this.tprintf(lt_position);
-        this.tprintf(l_termynalHeader);
-        // this.tprintf(l_termynalBody);
+                                           fa fa-download">
+                                    `;
+
+        let str_buttonSeries    = ` <input type="button" value=" &#xf019 /StudyIndex/./SeriesCount/ " 
+                                    style="padding: .1em .4em;" 
+                                    class="fa fa-download pure-button pure-button-primary">
+                                    <i class="fa fa-arrow-right"></i>
+                                    `;
+       
+        let lt_nav              = this.sprintf(l_nav,       false,  'style="color: lightgreen;"');
+        let lt_position         = this.sprintf(l_position,  false,  'style="color: fuchsia;"');
+        let str_header          = d_report['header'];
+        let str_body            = d_report['body'];
+        str_body                = str_body.replace(/SeriesDescription/gi, '');
+        let l_termynalHeader    = this.to_termynalResponseGenerate_fromText(str_header, false, 'style="color: yellow;"');
+        let l_termynalBody      = this.to_termynalResponseGenerate_fromText(str_body,   true,  'style="color: cyan;"')
+
+        let ltwrap_nav          = this.lineBlock_packageAndStyle(lt_nav);
+        let ltwrap_position     = this.lineBlock_packageAndStyle(lt_position,    '"', str_buttonStudy,  '</input>');
+        // let ltwrap_body         = this.lineBlock_packageAndStyle(l_termynalBody, 'justify-content:space-between"', str_buttonSeries);
+        let ltwrap_body         = this.lineBlock_packageAndStyle(l_termynalBody, '"', str_buttonSeries);
+        let ltwrap_header       = this.lineBlock_packageAndStyle(l_termynalHeader);
+
+        this.tprintf(ltwrap_nav);
+        this.tprintf(ltwrap_position);
+        this.tprintf(ltwrap_header);
         this.tprintf(ltwrap_body);
     }
 }
@@ -1186,17 +1224,17 @@ TERMynal_PACS.prototype.response_print          = function(pfresponse) {
 
 function Page() {
     this.str_help = `
-    The Page object defines/interacts with the html page.
+        The Page object defines/interacts with the html page.
 
-    The page element strings are "defined" here, and letious
-    DOM objects that can interact with these elements are also
-    instantiated.
+        The page element strings are "defined" here, and letious
+        DOM objects that can interact with these elements are also
+        instantiated.
     `;
 
     this.b_jsonSyntaxHighlight      = true;
     document.onkeydown              = this.checkForArrowKeyPress;
 
-    // DOM keys grouped logically
+    // Keys parsed from the URL
     this.l_urlParamsBasic = [   
         "pfdcm_IP", 
         "pfdcm_port", 
@@ -1208,6 +1246,7 @@ function Page() {
         "PACS_name",
     ];
 
+    // Specific PACS only keys
     this.l_PACSdetail   = [
         "PACS_IP", 
         "PACS_port", 
@@ -1234,6 +1273,8 @@ function Page() {
         "PerformedStationAETitle"
     ]
 
+    // Concat the basic URL with the PACSQR since PACS fields can
+    // be passed in the URL.
     this.l_urlParams    = this.l_urlParamsBasic.concat(this.l_PACSQR);
 
     // DOM keys related to termynal parts of the page
@@ -1242,14 +1283,14 @@ function Page() {
         "termynal_pacs"
     ];
 
-    // DOM obj elements --  built off keys and providing page
+    // DOM obj elements --  Each object has a specific list of page key
+    //                      elemnts that it process to provide page
     //                      access functionality
     this.DOMurl         = new DOM(this.l_urlParams);
     this.DOMpfdcm       = new DOM(this.l_pfdcm);
     this.DOMpacsdetail  = new DOM(this.l_PACSdetail);
     this.DOMpacsQR      = new DOM(this.l_PACSQR);
     this.DOMtermynal    = new DOM(this.l_termynal)
-
 
     this.PACS_TERMynal  = new TERMynal_PACS(
                                         "termynal_pacs",
@@ -1285,8 +1326,9 @@ function Page() {
         ]
     );
 
-
+    // object that parses the URL
     this.url            = new URL(this.DOMurl);
+
     // object to allow a MSG object access to a DOM obj
     this.d_MSGtermynal   = {
         'element':  this.l_termynal,
