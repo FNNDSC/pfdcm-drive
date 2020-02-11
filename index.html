@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!-- <html xmlns="http://www.w3.org/1999/xhtml"> -->
+<html>
 <head>
 
     <title>Driver for pfdcm</title>
@@ -7,7 +8,7 @@
     <!-- 3rd Party css -->
     <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
     <link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="//use.fontawesome.com/releases/v5.0.7/css/all.css">    
     <!-- <link rel="stylesheet" href="https://unpkg.com/terminal.css"> -->
     <link rel="stylesheet" href="termynal.css">
 
@@ -174,22 +175,32 @@
                         <label>PerformedStationAETitle</label>
                         <input style="width:225px;font-family:courier;" id="PerformedStationAETitle" name="PerformedStationAETitle" value=""/>                    
                     </div>
-                    <div class="pure-control-group">
-                        <label>
-                            <input type="button" onclick="return page.PACS_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
-                        </label>
-                        <label>
-                            <input type="button" onclick="return post.do({'operation': 'PACS_query'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="QUERY"></input>
-                        </labelclass="pure-input-1-2" id="QUERY" style="width:595px;">
-                    </select>
-                    </div>
                 </div>
 
-                <div id="termynal_pacs" name="termynal_pacs" style="font-size: .8em;" data-termynal data-termynal data-ty-cursor="_">
-                    <span data-ty="input" data-ty-typeDelay="5" data-ty-lineDelay="5" style="color: lightgreen;" data-ty-prompt="#///">Make sure you have done a 'Config PACS' -- see the button top right.</span>
-                    <span data-ty="input" data-ty-typeDelay="5" data-ty-lineDelay="5" style="color: lightgreen;" data-ty-prompt="#///">Use 'Check pfdcm' to see internal pfdcm server state.</span>
-                    <span data-ty="input" data-ty-typeDelay="5" data-ty-lineDelay="5" style="color: yellow;" data-ty-prompt="#///">Input your search parameters above and hit "QUERY".</span>
-                    <span data-ty="input" data-ty-typeDelay="10" data-ty-lineDelay="5" data-ty-prompt="#///">Output from PACS Q/R appears here.</span>
+                <div class="pure-control-group" style="display: flex;">
+                    <input type="button" onclick="return page.PACS_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
+                </div>
+
+                <div id="termynal_pacsStatus" name="termynal_pacsStatus" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-termynal data-ty-cursor="_">
+                    <span data-ty style="color: lightgreen;" data-ty-prompt="#///">Make sure you have done a 'Config PACS' -- see the button top right.</span>
+                    <span data-ty style="color: lightgreen;" data-ty-prompt="#///">Use 'Check pfdcm' to see internal pfdcm server state.</span>
+                    <span data-ty style="color: yellow;" data-ty-prompt="#///">Input your search parameters above and hit "QUERY".</span>
+                    <span data-ty data-ty-prompt="#///">Output from PACS RETRIEVE status here.</span>
+                    <span data-ty="input" data-ty-typeDelay="10" data-ty-lineDelay="5" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
+                </div>
+                <br>
+
+
+                <div class="pure-control-group" style="display: flex;">
+                    <input type="button" onclick="return page.PACS_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
+                    <input type="button" onclick="return post.do({'operation': 'PACS_query'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="QUERY"></input>
+                </div>
+
+                <div id="termynal_pacs" name="termynal_pacs" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-termynal data-ty-cursor="_">
+                    <span data-ty style="color: lightgreen;" data-ty-prompt="#///">Make sure you have done a 'Config PACS' -- see the button top right.</span>
+                    <span data-ty style="color: lightgreen;" data-ty-prompt="#///">Use 'Check pfdcm' to see internal pfdcm server state.</span>
+                    <span data-ty style="color: yellow;" data-ty-prompt="#///">Input your search parameters above and hit "QUERY".</span>
+                    <span data-ty data-ty-prompt="#///">Output from PACS Q/R appears here.</span>
                     <span data-ty="input" data-ty-typeDelay="10" data-ty-lineDelay="5" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
                 </div>
                 <br>
@@ -204,7 +215,7 @@
 
     <div class="modal"><!-- Place at bottom of page --></div>
     
-    <script src="termynal.js" data-termynal-container="#termynal_pfdcm|#termynal_pacs"></script>
+    <script src="termynal.js" data-termynal-container="#termynal_pfdcm|#termynal_pacs|#termynal_pacsStatus"></script>
     <script src="pfdcm-drive.js"></script>
 
 </body>
