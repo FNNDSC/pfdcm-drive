@@ -1171,17 +1171,10 @@ TERMynal_PACS.prototype.response_print          = function(pfresponse) {
     if(!this.contents.json_response.status) {
         this.pfresponseError_show(this.contents);
     } else {
-        this.totalNumberOfStudies   = this.contents.json_response.query.report.rawText.length;
         this.clear([]);
+        this.totalNumberOfStudies   = this.contents.json_response.query.report.rawText.length;
         const d_report              = this.contents.json_response.query.report.rawText[this.currentStudyIndex];
-        let l_nav = [
-            '[up]:    First Study                                   [right]:       Next Study',
-            '[down]:  Last Study                                    [left]:    Previous Study',
-            ' '
-        ];
-        let l_position          = [
-            'Showing Study ' + (this.currentStudyIndex+1) + '/' + this.totalNumberOfStudies,
-        ];
+
 
         let str_buttonStudy     = `<input type="button" value=" &#xf019 /StudyIndex/ " 
                                     style="padding: .1em .4em;" 
@@ -1193,25 +1186,47 @@ TERMynal_PACS.prototype.response_print          = function(pfresponse) {
         let str_buttonSeries    = ` <input type="button" value=" &#xf019 /StudyIndex/./SeriesCount/ " 
                                     style="padding: .1em .4em;" 
                                     class="fa fa-download pure-button pure-button-primary">
-                                    <i class="fa fa-arrow-right"></i>
                                     `;
-       
-        let lt_nav              = this.sprintf(l_nav,       false,  'style="color: lightgreen;"');
-        let lt_position         = this.sprintf(l_position,  false,  'style="color: fuchsia;"');
+
+
+        let l_navFirstNext = [
+            ' First Study                                                    Next Study ',
+        ];
+
+        let l_navLastPrev = [
+            ' Last Study                                                 Previous Study ',
+        ];
+
+        let l_position          = [
+            ' Showing Study ' + (this.currentStudyIndex+1) + '/' + this.totalNumberOfStudies,
+        ];
+
+        b_trimLeftSpace         = false;
+        let lt_navFirstNext     = this.sprintf(l_navFirstNext,  b_trimLeftSpace,  'style="color: lightgreen;"');
+        let lt_navLastPrev      = this.sprintf(l_navLastPrev,   b_trimLeftSpace,  'style="color: lightgreen;"');
+        let lt_position         = this.sprintf(l_position,      b_trimLeftSpace,  'style="color: fuchsia;"');
         let str_header          = d_report['header'];
         let str_body            = d_report['body'];
         str_body                = str_body.replace(/SeriesDescription/gi, '');
         let l_termynalHeader    = this.to_termynalResponseGenerate_fromText(str_header, false, 'style="color: yellow;"');
         let l_termynalBody      = this.to_termynalResponseGenerate_fromText(str_body,   true,  'style="color: cyan;"')
 
-        let ltwrap_nav          = this.lineBlock_packageAndStyle(lt_nav);
+        let ltwrap_navFirstNext = this.lineBlock_packageAndStyle(lt_navFirstNext, '"', 
+                                                                this.page.upArrow_inputButtonCreate()     + '</input>', 
+                                                                this.page.rightArrow_inputButtonCreate()  + '</input>');
+        let ltwrap_navLastPrev  = this.lineBlock_packageAndStyle(lt_navLastPrev, '"', 
+                                                                this.page.downArrow_inputButtonCreate()     + '</input>', 
+                                                                this.page.leftArrow_inputButtonCreate()  + '</input>');
         let ltwrap_position     = this.lineBlock_packageAndStyle(lt_position,    '"', str_buttonStudy,  '</input>');
         // let ltwrap_body         = this.lineBlock_packageAndStyle(l_termynalBody, 'justify-content:space-between"', str_buttonSeries);
-        let ltwrap_body         = this.lineBlock_packageAndStyle(l_termynalBody, '"', str_buttonSeries);
+        let ltwrap_body         = this.lineBlock_packageAndStyle(l_termynalBody, '"', str_buttonSeries + '&nbsp;');
         let ltwrap_header       = this.lineBlock_packageAndStyle(l_termynalHeader);
 
-        this.tprintf(ltwrap_nav);
+        this.tprintf(ltwrap_navFirstNext);
+        this.tprintf(ltwrap_navLastPrev);
+        this.tprintf(this.sprintf([' ']));
         this.tprintf(ltwrap_position);
+        this.tprintf(this.sprintf([' ']));
         this.tprintf(ltwrap_header);
         this.tprintf(ltwrap_body);
     }
@@ -1280,6 +1295,7 @@ function Page() {
     // DOM keys related to termynal parts of the page
     this.l_termynal = [
         "termynal_pfdcm",
+        "termynal_pacsRetrieveStatus",
         "termynal_pacs"
     ];
 
@@ -1390,7 +1406,21 @@ function Page() {
 Page.prototype = {
     constructor:    Page,
 
-    rightArrow_process:             function() {
+    FAinputButton_create:               function(astr_value, astr_fname, astr_baseSet = "fa") {
+        let str_inputButton     = `<input type="button" value=" &#x` + astr_value + ` " 
+                                    style="padding: .1em .4em;" 
+                                    class=" pure-button 
+                                            pure-button-primary 
+                                            ` + astr_baseSet + ` ` + astr_baseSet + '-' + astr_fname + `">
+                                  `;
+        return(str_inputButton);
+    },
+
+    rightArrow_inputButtonCreate:       function() {
+        return(this.FAinputButton_create("f35a", "arrow-alt-circle-right"));
+    },
+
+    rightArrow_process:                 function() {
         let str_help = `
 
             Process a right arrow event -- this should,
@@ -1406,7 +1436,11 @@ Page.prototype = {
         this.PACS_TERMynal.response_print(index);
     },
 
-    leftArrow_process:             function() {
+    leftArrow_inputButtonCreate:        function() {
+        return(this.FAinputButton_create("f359", "arrow-alt-circle-left"));
+    },
+
+    leftArrow_process:                  function() {
         let str_help = `
 
             Process a left arrow event -- this should,
@@ -1422,7 +1456,11 @@ Page.prototype = {
         this.PACS_TERMynal.response_print(index);
     },
 
-    upArrow_process:                function() {
+    upArrow_inputButtonCreate:          function() {
+        return(this.FAinputButton_create("f35b", "arrow-alt-circle-up"));
+    },
+
+    upArrow_process:                    function() {
         let str_help = `
 
             Process an up arrow event -- this should,
@@ -1435,7 +1473,11 @@ Page.prototype = {
         this.PACS_TERMynal.response_print(index);
     },
 
-    downArrow_process:                function() {
+    downArrow_inputButtonCreate:        function() {
+        return(this.FAinputButton_create("f358", "arrow-alt-circle-down"));
+    },
+
+    downArrow_process:                  function() {
         let str_help = `
 
             Process a down arrow event -- this should,
