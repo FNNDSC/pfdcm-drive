@@ -457,6 +457,7 @@ function MSG(d_comms) {
 
     // The actual response received from this message object
     this.pfresponse         = new PFResponse();
+    this.queryPFresponse    = new PFResponse();
 
      // A string key linking this message object to a component 
      // on the HTML page
@@ -688,8 +689,8 @@ MSG.prototype = {
         }
         let studyIndex              = d_args.study;
         let seriesIndex             = d_args.series;
-        let data                    = this.pfresponse.json_response.query.data[studyIndex]
-        let report                  = this.pfresponse.json_response.query.report.json[studyIndex]
+        let data                    = this.queryPFresponse.json_response.query.data[studyIndex]
+        let report                  = this.queryPFresponse.json_response.query.report.json[studyIndex]
         d_ret.StudyInstanceUID      = data.StudyInstanceUID.value ? 
                                       data.StudyInstanceUID.value                               : 'null';
         d_ret.SeriesInstanceUID     = report.bodySeriesUID[seriesIndex].SeriesInstanceUID ? 
@@ -779,16 +780,16 @@ MSG.prototype = {
     },
 
 
-    response_print:                 function(pfresponse) {
+    response_print:                 function() {
 
         if(this.str_DOMkey == 'termynal_pfdcm') {
-            this.page.pfdcm_TERMynal.response_print(pfresponse)
+            this.page.pfdcm_TERMynal.response_print(this.pfresponse);
         }
         if(this.str_DOMkey == 'termynal_pacs') {
-            this.page.PACS_TERMynal.response_print(pfresponse)
+            this.page.PACS_TERMynal.response_print(this.queryPFresponse);
         }
         if(this.str_DOMkey == 'termynal_pacsRetrieveStatus') {
-            this.page.PACSretrieveStatus_TERMynal.response_print(pfresponse)
+            this.page.PACSretrieveStatus_TERMynal.response_print(this.pfresponse);
         }
     }
 }
@@ -928,18 +929,40 @@ Fetch.prototype = {
         return response;
     },
 
-    handleReponse:  function (response) {
+    queryResponse_handle:    function(response) {
+        let str_help = `
+
+            In the case of a PACS Query, the response needs to
+            be archived in the MSG queryPFresponse object. This
+            is to "preserve" the query results over a series of
+            subsequent possible Retrieve calls and their responses.
+
+            The strategy to check on this is a bit "hacky". First,
+            the check can only be performed when the results of
+            a remote query have been received, i.e. asynchronously.
+            And secondly, the "trigger" is if the str_DOMkey for this
+            call is 'termynal_PACS'.
+
+        `;
+
+        if(this.TX.str_DOMkey == 'termynal_pacs') {
+            this.TX.queryPFresponse.set(response);
+            this.TX.queryPFresponse.parse();
+        }
+    },
+
+    handleReponse:          function (response) {
         let debug = new Debug("Fetch.handleResponse");
         debug.entering();
 
         console.log(response);
         this.TX.pfresponse.set(response);
         this.TX.pfresponse.parse();
-        this.TX.response_print(this.TX.pfresponse);
+        this.queryResponse_handle(response);
+        this.TX.response_print();
         debug.leaving();
 
         return response;
-
     },
 
     handleErrorsInFetch:  async function (response) {
@@ -996,6 +1019,7 @@ Fetch.prototype = {
             this.handleErrorsInFetch(e);
         } finally {
             this.handleReponse(str_response);
+            return str_response;
         }
     },
 
@@ -1072,7 +1096,7 @@ REST.prototype = {
         let str_help = `
             Do a PACS Query.
         `;
-        this.transmitAndProcess(this.msg.PACS_query());
+        str_queryResponse = this.transmitAndProcess(this.msg.PACS_query());
     },
 
     PACS_retrieve:          function(d_args) {
@@ -1110,7 +1134,7 @@ REST.prototype = {
     },
 
     transmitAndProcess: function(payload) {
-        this.clientAPI.transmitAndProcess(payload);
+        return this.clientAPI.transmitAndProcess(payload);
     },
 
 }
@@ -1468,7 +1492,7 @@ function TERMynal_PACS(str_DOMkey, DOMoutput, d_settings) {
 }
 
 TERMynal_PACS.prototype                 = Object.create(TERMynal.prototype);
-TERMynal_PACS.prototype.constructor     = TERMynal_pfdcm;
+TERMynal_PACS.prototype.constructor     = TERMynal_PACS;
 
 TERMynal_PACS.prototype.pfresponseError_show    = function(pfresponse) {
     let str_help = `
@@ -1495,7 +1519,6 @@ TERMynal_PACS.prototype.pfresponseError_show    = function(pfresponse) {
     ];
     this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
 }
-
 
 TERMynal_PACS.prototype.response_print          = function(pfresponse) {
     let str_help = `
@@ -1573,6 +1596,99 @@ TERMynal_PACS.prototype.response_print          = function(pfresponse) {
 }
 
 /////////
+///////// TERMynal_PACSretrieveStatus calling object with some specializations
+/////////
+
+function TERMynal_PACSretrieveStatus(str_DOMkey, DOMoutput, d_settings) {
+    this.help = `
+
+        A PACS "specialized" class of the base TERMynal.
+
+    `;
+
+    TERMynal.call(this, str_DOMkey, DOMoutput, d_settings);
+
+}
+
+TERMynal_PACSretrieveStatus.prototype                 = Object.create(TERMynal.prototype);
+TERMynal_PACSretrieveStatus.prototype.constructor     = TERMynal_PACSretrieveStatus;
+
+TERMynal_PACSretrieveStatus.prototype.pfresponseError_show    = function(pfresponse) {
+    let str_help = `
+
+        A simple method for reporting errors in the PACSretrieve interaction.
+
+    `;
+
+    let json_response   = pfresponse.json_response;
+    let str_errorMsg    = json_response.msg;
+    let str_suggest;
+
+    this.clear([]);
+
+    if(str_errorMsg == 'Invalid PACS specified!') {
+        str_suggest     = "Please verify PACS settings using the 'Config PACS' button.";
+    }
+
+    l_termynal          = [
+        '<span data-ty style="color:red;">An error was caught in the PACS interaction!</span>',
+        '<span data-ty style="color:red;">Reported issue was:</span>',
+        '<span data-ty style="color:yellow;">' + str_errorMsg + '</span>',
+        '<span data-ty style="color:yellow;">' + str_suggest  + '</span>',
+    ];
+    this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
+}
+
+TERMynal_PACSretrieveStatus.prototype.response_print          = function(pfresponse) {
+    let str_help = `
+
+        PACSretrieveStatus - specific TERMynal response handling.
+
+    `;
+
+    switch(typeof(pfresponse)) {
+        case    'undefined':    break;
+        case    'object':       this.contents           = pfresponse;
+                                break;
+    };
+      
+    if(!this.contents.json_response.status) {
+        this.pfresponseError_show(this.contents);
+    } else {
+        this.clear([]);
+
+        let d_result            = pfresponse.json_response.retrieve;
+
+        // Find the SeriesInstanceUID in the returned successful command string
+        let str_cmd                 = d_result.command;
+        let l_cmd                   = str_cmd.split(" ");
+        let str_SeriesInstanceKeyV  = l_cmd.find(a => a.includes("SeriesInstanceUID"));
+        if(typeof str_SeriesInstanceKeyV !== 'undefined') {
+            let b_trimLeftSpace         = false;
+            let str_seriesInstanceUID   = str_SeriesInstanceKeyV.split("=")[1];
+            let l_displayInfo           = pfresponse.pacsretrieve.map_retrieve.get('l_displayInfo');
+            let set_series              = pfresponse.pacsretrieve.set_series;
+            let seriesIndex             = [...set_series].indexOf(str_seriesInstanceUID);
+            let d_displayInfo           = l_displayInfo[seriesIndex];
+            let str_out                 = "...SUCCESS... " + 
+                                          d_displayInfo.StudyDate           + ": " + 
+                                          d_displayInfo.StudyDescription    + ": " +
+                                          d_displayInfo.SeriesDescription;
+            let l_termynalOut           = this.to_termynalResponseGenerate_fromText(str_out, b_trimLeftSpace, 'style="color: lightgreen;"');
+            let lt_termynalOut          = this.lineBlock_packageAndStyle(l_termynalOut);
+            this.tprintf(lt_termynalOut);
+            page.DOMpacsControl.style_set('STATUS', {'display': 'block'});
+        } else {
+            let str_out                 = "No SeriesInstanceUID found in retrieve command string!";
+            let l_termynalOut           = this.to_termynalResponseGenerate_fromText(str_out, b_trimLeftSpace, 'style="color: red;"');
+            let lt_termynalOut          = this.lineBlock_packageAndStyle(l_termynalOut);
+            this.tprintf(lt_termynalOut);
+        }
+
+    }
+}
+
+/////////
 ///////// A Page object that describes the HTML version elements from a 
 ///////// logical perspective.
 /////////
@@ -1644,7 +1760,8 @@ function Page() {
     this.l_PACScontrol = [
         "clear",
         "QUERY",
-        "RETRIEVE"
+        "RETRIEVE",
+        "STATUS"
     ];
 
     // DOM obj elements --  Each object has a specific list of page key
@@ -1657,7 +1774,7 @@ function Page() {
     this.DOMtermynal    = new DOM(this.l_termynal)
     this.DOMpacsControl = new DOM(this.l_PACScontrol);
 
-    this.PACSretrieveStatus_TERMynal  = new TERMynal_PACS(
+    this.PACSretrieveStatus_TERMynal  = new TERMynal_PACSretrieveStatus(
                                         "termynal_pacsRetrieveStatus",
                                         this.DOMtermynal, 
                                         {
@@ -1667,7 +1784,6 @@ function Page() {
                                         }
     );
 
-
     this.PACS_TERMynal  = new TERMynal_PACS(
                                         "termynal_pacs",
                                         this.DOMtermynal, 
@@ -1676,7 +1792,7 @@ function Page() {
                                             "scheme":   "dark",
                                             "page":     this
                                         }
-                                    );
+    );
 
     this.pfdcm_TERMynal = new TERMynal_pfdcm(
                                         "termynal_pfdcm", 
