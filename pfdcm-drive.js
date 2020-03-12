@@ -1096,6 +1096,9 @@ REST.prototype = {
         let str_help = `
             Do a PACS Query.
         `;
+        page.DOMpacsControl.style_set('RETRIEVE',   {'display': 'none'});
+        page.DOMpacsControl.style_set('STATUS',     {'display': 'none'});
+        page.PACSretrieveStatus_TERMynal.clear();
         str_queryResponse = this.transmitAndProcess(this.msg.PACS_query());
     },
 
