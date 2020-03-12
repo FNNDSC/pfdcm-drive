@@ -175,16 +175,6 @@
                 </div>
 
                 <div class="pure-control-group" style="display: flex;">
-                    <input type="button" onclick="return page.PACSretrieveStatus_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
-                </div>
-
-                <div id="termynal_pacsRetrieveStatus" name="termynal_pacsRetrieveStatus" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-ty-lineDelay="10" data-termynal data-ty-cursor="_">
-                    <span data-ty data-ty-prompt="#///">Output from PACS RETRIEVE status requests appear here.</span>
-                    <span data-ty="input" data-ty-typeDelay="10" data-ty-lineDelay="15" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
-                </div>
-                <br>
-
-                <div class="pure-control-group" style="display: flex;">
                     <input type="button" onclick="return page.PACS_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
                     <input type="button" onclick="return post.do({'operation': 'PACS_query'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="QUERY"></input>
                     <input type="button" id="RETRIEVE" name="RETRIEVE" onclick="return post.do({'operation': 'PACS_retrieve', 'args': {'study': 'all'}})" style="float: left; display: none;" class="pure-button pure-button-primary button-xsmall button-red" value="RETRIEVE all hits"></input>
@@ -198,6 +188,18 @@
                     <span data-ty="input" data-ty-typeDelay="10" data-ty-lineDelay="5" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
                 </div>
                 <br>
+
+                <div class="pure-control-group" style="display: flex;">
+                    <input type="button" onclick="return page.PACSretrieveStatus_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
+                    <input type="button" id="STATUS" name="STATUS" onclick="return post.do({'operation': 'PACS_status', 'args': {'study': 'all'}})" style="float: left; display: none;" class="pure-button pure-button-primary button-xsmall button-red" value="STATUS on retrieve"></input>
+                </div>
+
+                <div id="termynal_pacsRetrieveStatus" name="termynal_pacsRetrieveStatus" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-ty-lineDelay="10" data-termynal data-ty-cursor="_">
+                    <span data-ty data-ty-prompt="#///">Output from PACS RETRIEVE status requests appear here.</span>
+                    <span data-ty="input" data-ty-typeDelay="10" data-ty-lineDelay="15" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
+                </div>
+                <br>
+
 
                 <button onclick="window.location.reload(true)" class="pure-button pure-button-primary button-reset">Reset</button>
 
