@@ -8,9 +8,8 @@
 ///////// Debug object
 /////////
 /*
-    This object provides a simple tool for simple debugging --
-    mostly entering and exiting functions, printing some 
-    state, etc.
+    This object provides a straightforward interface for simple debugging --
+    mostly entering and exiting functions, printing some state, etc.
 */
 
 function Debug(d) {
@@ -19,13 +18,13 @@ function Debug(d) {
 
     d.functionName      string      name of function
     d.message           string      message
-    d.let               let         letiable to print
+    d.var               variable    variable to print
 
     */
 
     this.functionName   = '<void>';
     this.message        = '<void>';
-    this.let            = null;
+    this.var            = null;
     this.tab            = 0;
 
     if (d.constructor == Object) {
@@ -47,8 +46,8 @@ Debug.prototype = {
             this.functionName = d.functionName;
         if (typeof (d.message) != 'undefined')
             this.message = d.message;
-        if (typeof (d.let) != 'undefined')
-            this.let = d.let;
+        if (typeof (d.var) != 'undefined')
+            this.var = d.var;
     },
 
     cl:             function () {
@@ -350,6 +349,51 @@ PFResponse.prototype = {
         return(this.str_responseRaw);
     },
 
+    querySeries_toStudySeriesIndex: function(astr_seriesInstanceUID) {
+
+        let str_help    = `
+
+            Given a SeriesInstanceUID string, return the corresponding
+            study and series index in a given query response object.
+
+            Note indices are return counting from zero-order!
+
+            return d_ret = {
+                'status':   true|false,
+                'study':    <int>studyIndex,
+                'series':   <int>indexIndex
+            }
+
+        `;
+
+        d_ret   = {
+            'status':       false,
+            'study':        -1,
+            'series':       -1
+        }
+
+        if('query' in this.json_response) {
+            let totalNumberOfStudies = this.json_response.query.report.rawText.length;
+            for(let study = 0; study < totalNumberOfStudies; study++) {
+                d_report = this.json_response.query.report.json[study];
+                let series = 0;
+                for(const bodySeriesUID of d_report.bodySeriesUID) {
+                    if(bodySeriesUID.SeriesInstanceUID === astr_seriesInstanceUID) {
+                        d_ret = {
+                            'status':   true,
+                            'study':    study,
+                            'series':   series
+                        }
+                        break;
+                    }
+                    series++;
+                }
+            }
+        }
+
+        return d_ret;
+    },
+
     response_bodyStringUpdate:      function(str_body, ab_JSONupdate) {
 
         let str_help    = `
@@ -363,7 +407,7 @@ PFResponse.prototype = {
 
         `;
 
-        b_JSONupdate    = false;
+        let b_JSONupdate    = false;
         
         switch(typeof(ab_JSONupdate)) {
             case    'undefined':
@@ -455,13 +499,15 @@ function MSG(d_comms) {
     this.payload            = '';
     this.str_schemeAuthPath = '';
 
-    // The actual response received from this message object
-    this.pfresponse         = new PFResponse();
-    this.queryPFresponse    = new PFResponse();
+    // The actual response received from this message object, organized
+    // into three separate bins
+    this.pfresponse         = new PFResponse(); // the response
+    this.queryPFresponse    = new PFResponse(); // a copy for query
+    this.l_pfresponse       = [];               // an array of responses
 
      // A string key linking this message object to a component 
      // on the HTML page
-     this.str_DOMkey         = '';
+     this.str_DOMkey        = '';
 }
 
 MSG.prototype = {
@@ -560,7 +606,7 @@ MSG.prototype = {
         // Set the status button on the HTML page
         let PACS_config         = document.getElementById("config_PACS-opener");
         PACS_config.innerHTML   = 'Config PACS: Set';
-        PACS_config.className   = 'button-xsmall button-help-green pure-button';
+        PACS_config.className   = 'button-help-green pure-button';
         
         return(d_msg);    
     },
@@ -592,11 +638,11 @@ MSG.prototype = {
         // Build the schemeAuthPath at message compose since
         // DOM elements might have changed asynchronously.
         this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
-        this.str_DOMkey         = 'termynal_pacs';
+        this.str_DOMkey         = 'termynal_pacsQuery';
         let str_serviceName     = this.page.DOMpacsdetail.get('PACS_name');
         let d_on                = this.queryFields_determine();
 
-        this.page.PACS_TERMynal.clear([
+        this.page.PACSquery_TERMynal.clear([
             '<span data-ty>... PERFORMING QUERY ...</span>',
             '<span data-ty>... Please be patient while running ...</span>'
         ]);
@@ -691,16 +737,21 @@ MSG.prototype = {
         let seriesIndex             = d_args.series;
         let data                    = this.queryPFresponse.json_response.query.data[studyIndex]
         let report                  = this.queryPFresponse.json_response.query.report.json[studyIndex]
-        d_ret.StudyInstanceUID      = data.StudyInstanceUID.value ? 
-                                      data.StudyInstanceUID.value                               : 'null';
-        d_ret.SeriesInstanceUID     = report.bodySeriesUID[seriesIndex].SeriesInstanceUID ? 
-                                      report.bodySeriesUID[seriesIndex].SeriesInstanceUID       : 'null'  ;
-        d_ret.StudyDate             = report.header.StudyDate ? 
-                                      report.header.StudyDate                                   : 'null';
-        d_ret.StudyDescription      = report.header.StudyDescription ? 
-                                      report.header.StudyDescription                            : 'null';
-        d_ret.SeriesDescription     = report.body[seriesIndex].SeriesDescription ? 
-                                      report.body[seriesIndex].SeriesDescription                : 'null';
+        d_ret.StudyInstanceUID      = data.StudyInstanceUID.value                           ? 
+                                      data.StudyInstanceUID.value                           : 
+                                      'null';
+        d_ret.SeriesInstanceUID     = report.bodySeriesUID[seriesIndex].SeriesInstanceUID   ? 
+                                      report.bodySeriesUID[seriesIndex].SeriesInstanceUID   : 
+                                      'null'  ;
+        d_ret.StudyDate             = report.header.StudyDate                               ? 
+                                      report.header.StudyDate                               : 
+                                      'null';
+        d_ret.StudyDescription      = report.header.StudyDescription                        ? 
+                                      report.header.StudyDescription                        : 
+                                      'null';
+        d_ret.SeriesDescription     = report.body[seriesIndex].SeriesDescription            ? 
+                                      report.body[seriesIndex].SeriesDescription            : 
+                                      'null';
         if(Object.values(d_ret).indexOf('null') > -1)
             d_ret.status            = false
         return(d_ret);
@@ -712,6 +763,13 @@ MSG.prototype = {
             Based on the semantics of the d_args, this appends to the
             retrieve object's internal list counter, and returns a list
             based on d_args for subsequent calls to PACS_retrieve.
+
+            Input:
+            d_args = {
+                'study':    (int)studyIndex,
+                'series':   (int)seriesIndex
+            }
+
 
         `;
         let     map_retrieveSpec    = new Map([
@@ -728,6 +786,10 @@ MSG.prototype = {
         let     d_retrieve          = {};
 
         if('study' in d_args && 'series' in d_args) {
+            this.page.PACSquery_TERMynal.studySeriesButton_toggleON(
+                    'getInFlightStatus', 
+                    d_args
+                );
             d_retrieve  = this.PACS_singleSeriesRetrieveSpec(
                     d_args,
                     lmap_retrieveSpec,
@@ -744,6 +806,26 @@ MSG.prototype = {
         return(d_retrieve);
     },
 
+    PACS_status:                    function(d_args) {
+        let str_help = `
+            Send a "retrieveStatus" on a given SeriesInstanceUID            
+        `;
+
+        this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
+        this.str_DOMkey         = 'termynal_seriesStatus';
+        let str_serviceName     = this.page.DOMpacsdetail.get('PACS_name');
+        
+        let d_msg = {
+            "action": "PACSinteract",
+            "meta": {
+                "do":       "retrieveStatus",
+                "on":       d_args,
+                "PACS":     str_serviceName
+            }
+        };
+        return(d_msg);    
+    },
+
     PACS_retrieve:                  function(d_args, d_info) {
         let str_help = `
 
@@ -756,10 +838,10 @@ MSG.prototype = {
         // Build the schemeAuthPath at message compose since
         // DOM elements might have changed asynchronously.
         this.str_schemeAuthPath = this.APIschemeAuthPath_build(); 
-        this.str_DOMkey         = 'termynal_pacsRetrieveStatus';
+        this.str_DOMkey         = 'termynal_pacsRetrieve';
         let str_serviceName     = this.page.DOMpacsdetail.get('PACS_name');
 
-        this.page.PACSretrieveStatus_TERMynal.clear([
+        this.page.PACSretrieve_TERMynal.clear([
             '<span data-ty>... </span',
             '<span data-ty style="color: lightgreen;">... ASKING PACS TO SEND DATA ...</span>',
             '<span data-ty style="color: yellow;">... StudyDate:         ' + d_info.StudyDate + ' ...</span>',
@@ -785,11 +867,20 @@ MSG.prototype = {
         if(this.str_DOMkey == 'termynal_pfdcm') {
             this.page.pfdcm_TERMynal.response_print(this.pfresponse);
         }
-        if(this.str_DOMkey == 'termynal_pacs') {
-            this.page.PACS_TERMynal.response_print(this.queryPFresponse);
+        if(this.str_DOMkey == 'termynal_pacsQuery') {
+            this.page.PACSquery_TERMynal.response_print(this.queryPFresponse);
         }
-        if(this.str_DOMkey == 'termynal_pacsRetrieveStatus') {
-            this.page.PACSretrieveStatus_TERMynal.response_print(this.pfresponse);
+        if(this.str_DOMkey == 'termynal_pacsRetrieve') {
+            this.page.PACSretrieve_TERMynal.response_print(this.pfresponse);
+        }
+        if(this.str_DOMkey == 'termynal_seriesStatus') {
+            if(this.l_pfresponse.length) {
+                let response    = this.l_pfresponse.pop()
+                let pfresponse  = new PFResponse();
+                pfresponse.set(response);
+                pfresponse.parse();
+                this.page.seriesStatus_TERMynal.response_print(pfresponse);
+            }
         }
     }
 }
@@ -851,7 +942,7 @@ AJAX.prototype = {
         let debug = new Debug("AJAX.onSuccess_callback");
         debug.entering();
 
-        debug.vlog({ 'message': 'SRVresp', let: SRVresp });
+        debug.vlog({ 'message': 'SRVresp', var: SRVresp });
 
         debug.leaving();
     },
@@ -895,7 +986,7 @@ function Fetch(Msg) {
 Fetch.prototype = {
     constructor: Fetch,
 
-    postData: async function (url = '', data = {}) {
+    postData:                       async function (url = '', data = {}) {
         let str_help = `
 
             Note that "weird" behaviour in comms is most often
@@ -917,7 +1008,7 @@ Fetch.prototype = {
         let debug = new Debug("Fetch.checkFirstForErrorsInResponse");
         debug.entering();
 
-        debug.vlog({ 'message': '\nresponse', let: response });
+        debug.vlog({ 'message': '\nresponse', var: response });
 
         // Some parsing on 'reponse' for an error condition,
         // possibly reponse.ok if a Response object is passed
@@ -929,7 +1020,7 @@ Fetch.prototype = {
         return response;
     },
 
-    queryResponse_handle:    function(response) {
+    queryResponse_handle:       function(response) {
         let str_help = `
 
             In the case of a PACS Query, the response needs to
@@ -941,17 +1032,49 @@ Fetch.prototype = {
             the check can only be performed when the results of
             a remote query have been received, i.e. asynchronously.
             And secondly, the "trigger" is if the str_DOMkey for this
-            call is 'termynal_PACS'.
+            call is 'termynal_pacsQuery'.
 
         `;
+        let debug = new Debug("Fetch.queryResponse_handle");
+        debug.entering();
 
-        if(this.TX.str_DOMkey == 'termynal_pacs') {
+        if(this.TX.str_DOMkey == 'termynal_pacsQuery') {
             this.TX.queryPFresponse.set(response);
             this.TX.queryPFresponse.parse();
         }
+        debug.leaving();
     },
 
-    handleReponse:          function (response) {
+    seriesResponse_handle:      function(response) {
+        let str_help = `
+
+            In the case of a PACS Query, multiple asynchronous
+            pfdcm status queries on a series are made. These are
+            captured by being "pushed" into an array structure in
+            the MSG object. This method really does little more
+            than push these responses to the MSG array.
+
+            The strategy to check on this is a bit "hacky". First,
+            the check can only be performed when the results of
+            a remote query have been received, i.e. asynchronously.
+            And secondly, the "trigger" is if the str_DOMkey for this
+            call is 'termynal_seriesStatus'.
+
+            Downstream, a response is popped off the array, and 
+            processed in the series termynal.
+
+        `;
+        let debug = new Debug("Fetch.seriesResponse_handle");
+        debug.entering();
+
+        if(this.TX.str_DOMkey == 'termynal_seriesStatus') {
+            this.TX.l_pfresponse.push(response);
+        }
+        debug.leaving();
+
+    },
+
+    handleReponse:              function (response) {
         let debug = new Debug("Fetch.handleResponse");
         debug.entering();
 
@@ -959,16 +1082,17 @@ Fetch.prototype = {
         this.TX.pfresponse.set(response);
         this.TX.pfresponse.parse();
         this.queryResponse_handle(response);
+        this.seriesResponse_handle(response);
         this.TX.response_print();
-        debug.leaving();
 
+        debug.leaving();
         return response;
     },
 
     handleErrorsInFetch:  async function (response) {
         let debug = new Debug("Fetch.handleErrorsInFetch");
         debug.entering();
-        debug.vlog({ 'message': '\nresponse', let: response });
+        debug.vlog({ 'message': '\nresponse', var: response });
 
         console.log('attempting to call again!');
 
@@ -999,6 +1123,9 @@ Fetch.prototype = {
     },
 
     transmitAndProcess: async function (payload) {
+        let debug = new Debug("Fetch.transmitAndProcess");
+        debug.entering();
+
         this.payload    = payload;
         this.TXoptions  = {
             method:         this.TX.d_comms['VERB'],    // *GET, POST, PUT, DELETE, etc.
@@ -1019,6 +1146,7 @@ Fetch.prototype = {
             this.handleErrorsInFetch(e);
         } finally {
             this.handleReponse(str_response);
+            debug.leaving();
             return str_response;
         }
     },
@@ -1057,6 +1185,7 @@ function REST(d_comms) {
     this.msg                = new MSG(d_comms);
     this.SRVresp            = null;     // Raw reponse
     this.json_SRVresp       = null;     // JSONified response
+    d_comms.page.rest       = this;     // Connect the page to this REST
 
     switch(d_comms['clientAPI']) {
         case 'Fetch':   
@@ -1071,46 +1200,131 @@ function REST(d_comms) {
 REST.prototype = {
     constructor:            REST,
 
-    hello:                  function() {
+    hello:                      function() {
         let str_help = `
             Say hello to pfdcm
         `;
         this.transmitAndProcess(this.msg.hello());
     },
 
-    pfdcm_get:              function() {
+    pfdcm_get:                  function() {
         let str_help = `
             Get internal state of pfdcm
         `;
         this.transmitAndProcess(this.msg.pfdcm_get());
     },
 
-    pfdcm_set:              function() {
+    pfdcm_set:                  function() {
         let str_help = `
             Set pfdcm internals based on the contents of page input fields.
         `;
         this.transmitAndProcess(this.msg.pfdcm_set());
     },
 
-    PACS_query:             function() {
+    PACS_query:                 function() {
         let str_help = `
             Do a PACS Query.
         `;
         page.DOMpacsControl.style_set('RETRIEVE',   {'display': 'none'});
         page.DOMpacsControl.style_set('STATUS',     {'display': 'none'});
-        page.PACSretrieveStatus_TERMynal.clear();
+        page.PACSretrieve_TERMynal.clear();
         str_queryResponse = this.transmitAndProcess(this.msg.PACS_query());
     },
 
-    PACS_retrieve:          function(d_args) {
+    PACS_status:                function(d_args) {
+        let str_help = `
+            Do a PACS status request.
+
+            For a SeriesInstanceUID in <d_args>, construct
+            a status message request to pfdcm.
+            
+            INPUT:
+            d_args:
+                {
+                    'SeriesInstanceUID':    <string>
+                }
+
+        `;
+        this.transmitAndProcess(this.msg.PACS_status(d_args));        
+    },
+
+    studySeries_statusCheck:    function(d_args) {
+        let str_help    = `
+            Entry point for checking on the status of a specific series,
+            referenced by a <studyIndexCount> and a <seriesIndexCount>
+
+            Essentially, this method will determine the actual string
+            SeriesInstanceUID from the study/series count, check on 
+            pfdcm for status on that instance, and also check in the 
+            pacsretrieve object if that series is currently in the
+            retrieve set.
+
+            INPUT:
+            d_args:
+                { 
+                    'study':    <studyIndex>,
+                    'series':   <seriesIndex>
+                }
+
+            RETURN:
+            d_ret: {
+                'status':   true      -- series lookup successful
+                            false     -- series lookup unsuccessful
+                'state':    'inQueue' -- in local client queue for retrieval
+                            'async'   -- not in local queue, async call done
+            }
+        `;
+        let d_detail                = this.msg.PACS_fieldsGetOnStudySeries(d_args);
+        let str_seriesInstanceUID   = d_detail.SeriesInstanceUID;
+        let d_ret                   = {
+            'status':   false,
+            'state':    ''
+        };
+
+        if(d_detail.status) {
+            let d_series    = {
+                'series_uid':   str_seriesInstanceUID
+            }
+
+            // First, check if the seriesInstanceUID is in the active
+            // retrieve record set
+            let b_inQueue = this.msg.pfresponse.pacsretrieve.series_isInQueue(str_seriesInstanceUID);
+            if(b_inQueue) {
+                // If inQueue, then we populate the return object with 
+                // 'inQueue' state. The caller can immediately update local
+                // state synchronously based on this information.
+                d_ret.status    = true;
+                d_ret.state     = 'inQueue'
+            } else {
+                // In this instance, we populate the return object with
+                // 'async' state and perform a call to the remote pfdcm.
+                // The caller does not know the final state *yet*, and 
+                // thus needs to do some asynchronous processing.
+                d_ret.status    = true;
+                d_ret.stats     = 'async'
+                this.PACS_status(d_series);
+            }
+        }
+        return d_ret;
+    },
+
+    PACS_retrieve:              function(d_args) {
         let str_help = `
             Do a PACS Retrieve.
             
             For "multiple" hits, this method calls the underlying
             message handler appropriately.
+
+            Input:
+            d_args = {
+                'study':    (int)studyIndex,
+                'series':   (int)seriesIndex
+            }
+
         `;
+
         let zip             = (a,b) => a.map((x,i) => [x, b[i]]);
-        let d_retrieve      =     this.msg.PACS_retrieveParse(d_args);
+        let d_retrieve      = this.msg.PACS_retrieveParse(d_args);
 
         if(d_retrieve.status) {
             for(const [d_on, d_info] of zip(d_retrieve.ld_retrieveSpec, d_retrieve.ld_info)) {
@@ -1119,19 +1333,43 @@ REST.prototype = {
         }
     },
 
-    do:                     function(d_op) {
+    studySeries_status:         function(d_args) {
+        let str_help = `
+            Call a status on a given study/series tuple.
+
+            Input:
+            d_args = {
+                'study':    (int)studyIndex,
+                'series':   (int)seriesIndex
+            }
+
+        `;
+
+        let zip             = (a,b) => a.map((x,i) => [x, b[i]]);
+        let d_retrieve      = this.msg.PACS_retrieveParse(d_args);
+
+        if(d_retrieve.status) {
+            for(const [d_on, d_info] of zip(d_retrieve.ld_retrieveSpec, d_retrieve.ld_info)) {
+                this.transmitAndProcess(this.msg.PACS_retrieve(d_on, d_info));
+            }
+        }
+    },
+
+    do:                         function(d_op) {
         if('operation' in d_op) {
             switch(d_op['operation']) {
-                case 'hello':           this.hello();
-                                        break;
-                case 'pfdcm_get':       this.pfdcm_get();
-                                        break;
-                case 'pfdcm_set':       this.pfdcm_set();
-                                        break;
-                case 'PACS_query':      this.PACS_query();
-                                        break;
-                case 'PACS_retrieve':   this.PACS_retrieve(d_op['args']);
-                                        break;
+                case 'hello':               this.hello();
+                                            break;
+                case 'pfdcm_get':           this.pfdcm_get();
+                                            break;
+                case 'pfdcm_set':           this.pfdcm_set();
+                                            break;
+                case 'PACS_query':          this.PACS_query();
+                                            break;
+                case 'PACS_retrieve':       this.PACS_retrieve(d_op['args']);
+                                            break;
+                case 'studySeries_status':  this.studySeries_status(d_op['args]');
+                                            break;
             }
         }
     },
@@ -1350,8 +1588,220 @@ TERMynal.prototype = {
         return(l_termynal);
     },
 
+    studySeriesButton_toggleON:         function(astr_display, d_args) {
 
-    lineBlock_packageAndStyle:  function(al_line, 
+        let str_help = `
+
+            Toggle the visible state of a specific study/series
+            button. For a given 'display' choice, set that
+            button to 'block' and the others to 'none'.
+
+            <buttonChoiceToMakeVisible> is one of:
+
+                    - retrieve
+                    - getInFlightStatus
+                    - getInfo
+        
+            Input:
+            d_args = {
+                'study':        <int>study,
+                'series':       <int>series
+            }
+
+            Return:
+            d_ret = {
+                'status':       true|false,
+            }
+
+        `;
+
+        let d_ret               = {
+            'status':   false
+        }
+        let l_buttonSpec        = ['retrieve', 'getInFlightStatus', 'getInfo'];
+        
+        if(l_buttonSpec.includes(astr_display)) {
+            let str_DOMbase     = 'Study-' + d_args.study + '-Series-' + d_args.series; 
+            for(str_button of l_buttonSpec) {
+                buttonHTML      = document.getElementById(str_DOMbase + '-' + str_button);
+                if(str_button === astr_display) {
+                    buttonHTML.style.display = "block";
+                } else {
+                    buttonHTML.style.display = "none";
+                }
+            }
+            d_ret.status = true;
+        }
+
+        return d_ret;
+    },
+
+    studySeriesButton_processDOMid:     function(d_args) {
+        let str_help = `
+    
+            Processes a button element on the DOM in the context of
+            study/series operations.
+
+            Note, this is only string operation on the button 
+            core template in the context of a study/series count.
+
+            The button does not necessarily yet exist in the DOM!
+        
+            Input:
+            d_args = {
+                'study':        <int>study,
+                'series':       <int>series
+                'buttonHTML':   <buttonHTMLToProcess>
+            }
+
+            Return:
+            d_ret = {
+                'status':       true|false,
+                'buttonHTML':   <processedButtonString>
+            }
+
+        `;
+        let d_ret = {
+            'status':       true,
+            'buttonHTML':   ''
+        }
+        let str_button          = d_args.buttonHTML;
+        let seriesCount         = d_args.series;
+        let str_seriesCount1    = (seriesCount+1).toString().padStart(2, '0');
+        let str_currentStudy1   = (this.currentStudyIndex+1).toString().padStart(4, ' ');
+
+        if(str_button.includes('/SeriesCount')) {
+            // We check on the status of a "series" as we process the DOM
+            // HTML. The idea is to possibly toggle a different button option
+            // display visibility. 
+            d_seriesStatus      = this.page.rest.studySeries_statusCheck( {
+                                                'study':    this.currentStudyIndex, 
+                                                'series':   seriesCount
+                                    });
+        }
+
+        str_button          = str_button.replace(/\/StudyIndex1\//g,    str_currentStudy1);
+        str_button          = str_button.replace(/\/StudyIndex\//g,     this.currentStudyIndex);
+        str_button          = str_button.replace(/\/SeriesCount1\//g,   str_seriesCount1);
+        str_button          = str_button.replace(/\/SeriesCount\//g,    seriesCount);
+        d_ret.buttonHTML    = str_button;
+
+        return d_ret;
+
+    },
+
+    studySeriesButton_processOnClick:  function(d_args) {
+        let str_help = `
+    
+            Processes the 'onclick' attribute of a button element 
+            in the DOM in the context of study/series operations.
+
+            Note, this is a string-only operation on the button 
+            core template in the context of a study/series count.
+            Since the button might not yet exist in the DOM, this 
+            method does not always result in DOM updates on 
+            execution! 
+
+            Input:
+            d_args = {
+                'context':      'retrieve'|'getInFlightStatus'|'getInfo'
+                'study':        <int>study,
+                'series':       <int>series
+                'buttonHTML':   <buttonStringToProcess>
+            }
+
+            Return:
+            d_ret = {
+                'status':       true|false,
+                'buttonHTML':   <processedButtonString>
+            }
+
+        `;
+        let d_ret = {
+            'status':       false,
+            'buttonHTML':   ''
+        }
+
+        let str_button          = d_args.buttonHTML;
+        let seriesCount         = d_args.series;
+        let d_contextMap        = {
+            'retrieve':             'PACS_retrieve',
+            'getInFlightStatus':    'PACS_status',
+            'getInfo':              'studySeries_status'
+        }
+
+        if(str_button.includes('/StudyIndex') && !str_button.includes('/SeriesCount')) {
+            d_ret.status        = true;
+            str_button          = str_button.replace(
+                        'onclick =  "'+ d_args.context +  '"',
+                        `onclick =  "return post.do({
+                                    'operation': '` + d_contextMap[d_args.context] + `',
+                                        'args': {
+                                                'study': ` + this.currentStudyIndex +`
+                                                }
+                                    })"`
+            );
+        }
+        if(str_button.includes('/SeriesCount')) {
+            d_ret.status        = true;
+            str_button          = str_button.replace(
+                        'onclick =  "'+ d_args.context +  '"',
+                        `onclick =  "return post.do({
+                                    'operation': '` + d_contextMap[d_args.context] + `',
+                                        'args': {
+                                                'study': ` + this.currentStudyIndex +`,
+                                                'series':` + seriesCount            +`
+                                                }
+                                    })"`
+            );
+        }
+        d_ret.buttonHTML    = str_button;
+        return d_ret;
+    },
+
+    button_process:             function(astr_button, currentSeriesIndex) {
+        let str_help = `
+            
+            A dispatching function that process the per-study and per-series
+            button HTML text in the context of a study and series.
+
+            Input:
+            <astr_button>   HTML string of the button markup to process
+
+            Return:
+            String of processed HTML markup
+
+        `        
+        // Process the onclick of each button context
+        let     d_buttonRet = {
+                'status':       false,
+                'buttonHTML':   astr_button
+        };
+
+        // First the onclick of the astr_button
+        for(str_context of ['retrieve', 'getInFlightStatus', 'getInfo']) {
+            d_buttonRet = this.studySeriesButton_processOnClick( {
+                'context':      str_context,
+                'buttonHTML':   d_buttonRet.buttonHTML,
+                'series':       currentSeriesIndex,
+                'study':        this.currentStudyIndex
+            });
+        }
+
+        // Now the name/id and other string info
+        d_buttonRet     = this.studySeriesButton_processDOMid({
+            'buttonHTML':   d_buttonRet.buttonHTML,
+            'series':       currentSeriesIndex,
+            'study':        this.currentStudyIndex
+        })
+
+        // Finally, return the processed markup
+        if(d_buttonRet.status)
+            return d_buttonRet.buttonHTML;
+    },
+
+    lineBlock_packageAndStyle:  function(   al_lines, 
+                                            af_perLineFunc      = null,
                                             astr_groupStyle     = '"', 
                                             astr_elementOpen    = '', 
                                             astr_elementClose   = '') {
@@ -1365,58 +1815,45 @@ TERMynal.prototype = {
         let l_divBlock      = '';
         l_divBlock          = this.ltag_wrapEachLine(
             '<div style="display: flex; height:20px;' + astr_groupStyle + '>' + astr_elementOpen,
-            al_line,
+            af_perLineFunc,
+            al_lines,
             astr_elementClose + '</div>'
         );
         return(l_divBlock);
     },
-    
-    ltag_wrapEachLine:          function(astr_prefix, al_lines, astr_suffix) {
+
+    ltag_wrapEachLine:          function(astr_prefix, f_prefix, al_lines, astr_suffix) {
         let str_help = `
 
             Wrap around each line in <al_lines>, creating a new string:
 
-                <astr_prefix><str_line><astr_suffix>
+                        <astr_prefix><str_line><astr_suffix>
+
+            where <str_line> is each line in <al_lines>.
+
+            If <f_prefix> is non-null and a function, then process the 
+            <astr_prefix> with <f_prefix>, i.e.
+            
+                        <f_prefix>(<astr_prefix>, <loopIndex>)
+
+            <f_prefix> should have a second argument which is the current
+            loop index of the current position in <al_lines>.
 
             Some character substitution is performed. If the <astr_prefix>
             contains:
 
-                '/StudyIndex/':     replaced by the current study index
-                '/SeriesCount/':    replaced by the current series index
+                '/StudyIndex/':     replaced by the current study index+1
+                '/SeriesCount/':    replaced by the current series index+1
 
         `;
 
         let l_termynal  = [];
-        let seriesCount = 1;
+        let seriesCount = 0;
         let str_prefix  = astr_prefix;
         for(str_line of al_lines) {
-            str_currentStudy    = (this.currentStudyIndex+1).toString().padStart(4, ' ');
-            if(str_prefix.includes('/StudyIndex') && !str_prefix.includes('/SeriesCount')) {
-                str_prefix      = str_prefix.replace(
-                            'onclick=""',
-                            `onclick="return post.do({
-                                                        'operation': 'PACS_retrieve',
-                                                        'args': {
-                                                                 'study': ` + this.currentStudyIndex +`
-                                                                }
-                                                    })"`
-                );
-            }
-            str_prefix          = str_prefix.replace('/StudyIndex/', str_currentStudy);
-            str_seriesCount     = (seriesCount).toString().padStart(2, '0');
-            if(str_prefix.includes('/SeriesCount')) {
-                str_prefix      = str_prefix.replace(
-                            'onclick=""',
-                            `onclick="return post.do({
-                                                        'operation': 'PACS_retrieve',
-                                                        'args': {
-                                                                    'study': ` + this.currentStudyIndex +`,
-                                                                    'series':` + (seriesCount-1)        +`
-                                                                }
-                                                    })"`
-                );
-            }
-            str_prefix          = str_prefix.replace('/SeriesCount/', str_seriesCount);
+            if(f_prefix !== null) {
+                str_prefix = f_prefix(str_prefix, seriesCount);
+            } 
             l_termynal.push(str_prefix + str_line + astr_suffix);
             seriesCount++;
             str_prefix = astr_prefix;
@@ -1465,39 +1902,99 @@ TERMynal_pfdcm.prototype.response_print = function(pfresponse) {
 }
 
 /////////
-///////// TERMynal_PACS calling object with some specializations
+///////// TERMynal_PACSquery calling object with some specializations
 /////////
 
-function TERMynal_PACS(str_DOMkey, DOMoutput, d_settings) {
+function TERMynal_PACSquery(str_DOMkey, DOMoutput, d_settings) {
     this.help = `
 
-        A PACS "specialized" class of the base TERMynal.
+        A PACS "specialized" class of the base TERMynal. 
+
+        The constructor mostly defines the space of input button
+        templates for the UI.
+
+        Three button types are defined, and depending on context
+        are toggled display on or off.
 
     `;
 
     TERMynal.call(this, str_DOMkey, DOMoutput, d_settings);
     this.currentStudyIndex              = 0;
     this.totalNumberOfStudies           = 0;
-    this.str_buttonStudy     = `<input type="button" onclick="" 
-                                value=" &#xf019 /StudyIndex/ " 
-                                style="padding: .1em .4em;" 
-                                class="pure-button 
-                                    pure-button-primary 
-                                    fa fa-download">
+    this.str_buttonStudy     = `<input  type    =  "button" 
+                                        onclick =  "retrieve" 
+                                        value   =  "&#xf019 /StudyIndex1/ " 
+                                        style   =  "font-family: FontAwesome, monospace;  
+                                                    padding: .1em .4em;"
+                                        id      =  "Study-/StudyIndex/-retrieve" 
+                                        name    =  "Study-/StudyIndex/-retrieve" 
+                                        class   =  "pure-button 
+                                                    pure-button-primary 
+                                                    fas fas-download"></input>
+                                <input type     =  "button" 
+                                        onclick =  "getInFlightStatus"
+                                        value   =  "&#xf0ae /StudyIndex1/./SeriesCount1/ " 
+                                        style   =  "font-family: FontAwesome, monospace;  
+                                                    padding: .1em .4em;
+                                                    display: none;"
+                                        id      =  "Study-/StudyIndex/-getInFlightStatus" 
+                                        name    =  "Study-/StudyIndex/-getInFlightStatus" 
+                                        class   =  "pure-button 
+                                                    pure-button-primary button-orange
+                                                    fas fas-tasks"></input>
+                                <input type     =  "button" 
+                                        onclick =  "getInfo"
+                                        value   =  "&#xf05a /StudyIndex1/./SeriesCount1/ " 
+                                        style   =  "font-family: FontAwesome, monospace;  
+                                                    padding: .1em .4em;
+                                                    display: none;"
+                                        id      =  "Study-/StudyIndex/-getInfo" 
+                                        name    =  "Study-/StudyIndex/-getInfo" 
+                                        class   =  "pure-button 
+                                                    pure-button-primary button-green
+                                                    fas fas-info-circle"></input>
                                 `;
 
-    this.str_buttonSeries    = ` <input type="button" onclick=""
-                                value=" &#xf019 /StudyIndex/./SeriesCount/ " 
-                                style="padding: .1em .4em;" 
-                                class="fa fa-download pure-button pure-button-primary">
+    this.str_buttonSeries    = ` <input type    =  "button" 
+                                        onclick =  "retrieve"
+                                        value   =  "&#xf019 /StudyIndex1/./SeriesCount1/ " 
+                                        style   =  "font-family: FontAwesome, monospace;  
+                                                    padding: .1em .4em;"
+                                        id      =  "Study-/StudyIndex/-Series-/SeriesCount/-retrieve" 
+                                        name    =  "Study-/StudyIndex/-Series-/SeriesCount/-retrieve" 
+                                        class   =  "pure-button 
+                                                    pure-button-primary
+                                                    fas fas-download"></input>
+                                <input type     =  "button" 
+                                        onclick =  "getInFlightStatus"
+                                        value   =  "&#xf0ae /StudyIndex1/./SeriesCount1/ " 
+                                        style   =  "font-family: FontAwesome, monospace;  
+                                                    padding: .1em .4em;
+                                                    display: none;"
+                                        id      =  "Study-/StudyIndex/-Series-/SeriesCount/-getInFlightStatus" 
+                                        name    =  "Study-/StudyIndex/-Series-/SeriesCount/-getInFlightStatus" 
+                                        class   =  "pure-button 
+                                                    pure-button-primary button-orange
+                                                    fas fas-tasks"></input>
+                                <input type     =  "button" 
+                                        onclick =  "getInfo"
+                                        value   =  "&#xf05a /StudyIndex1/./SeriesCount1/ " 
+                                        style   =  "font-family: FontAwesome, monospace;  
+                                                    padding: .1em .4em;
+                                                    display: none;"
+                                        id      =  "Study-/StudyIndex/-Series-/SeriesCount/-getInfo" 
+                                        name    =  "Study-/StudyIndex/-Series-/SeriesCount/-getInfo" 
+                                        class   =  "pure-button 
+                                                    pure-button-primary button-green
+                                                    fas fas-info-circle"></input>
                                 `;
 
 }
 
-TERMynal_PACS.prototype                 = Object.create(TERMynal.prototype);
-TERMynal_PACS.prototype.constructor     = TERMynal_PACS;
+TERMynal_PACSquery.prototype                 = Object.create(TERMynal.prototype);
+TERMynal_PACSquery.prototype.constructor     = TERMynal_PACSquery;
 
-TERMynal_PACS.prototype.pfresponseError_show    = function(pfresponse) {
+TERMynal_PACSquery.prototype.pfresponseError_show    = function(pfresponse) {
     let str_help = `
 
         A simple method for reporting errors in the PACS interaction.
@@ -1523,7 +2020,7 @@ TERMynal_PACS.prototype.pfresponseError_show    = function(pfresponse) {
     this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
 }
 
-TERMynal_PACS.prototype.response_print          = function(pfresponse) {
+TERMynal_PACSquery.prototype.response_print          = function(pfresponse) {
     let str_help = `
 
         PACS - specific TERMynal response handling.
@@ -1564,26 +2061,60 @@ TERMynal_PACS.prototype.response_print          = function(pfresponse) {
         ];
 
         b_trimLeftSpace         = false;
-        let lt_navFirstNext     = this.sprintf(l_navFirstNext,  b_trimLeftSpace,  'style="color: lightgreen;"');
-        let lt_navLastPrev      = this.sprintf(l_navLastPrev,   b_trimLeftSpace,  'style="color: lightgreen;"');
-        let lt_position         = this.sprintf(l_position,      b_trimLeftSpace,  'style="color: fuchsia;"');
+        let lt_navFirstNext     = this.sprintf(
+                                        l_navFirstNext,  
+                                        b_trimLeftSpace,  
+                                        'style="color: lightgreen;"'
+                                    );
+        let lt_navLastPrev      = this.sprintf(
+                                        l_navLastPrev,   
+                                        b_trimLeftSpace,  
+                                        'style="color: lightgreen;"'
+                                    );
+        let lt_position         = this.sprintf(
+                                        l_position,      
+                                        b_trimLeftSpace,  
+                                        'style="color: fuchsia;"'
+                                    );
         let str_header          = d_report['header'];
         let str_body            = d_report['body'];
         str_body                = str_body.replace(/SeriesDescription/gi, '');
-        let l_termynalHeader    = this.to_termynalResponseGenerate_fromText(str_header, false, 'style="color: yellow;"');
-        let l_termynalBody      = this.to_termynalResponseGenerate_fromText(str_body,   true,  'style="color: cyan;"')
-
-        let ltwrap_navFirstNext = this.lineBlock_packageAndStyle(lt_navFirstNext, '"', 
-                                                                this.page.upArrow_inputButtonCreate()       + '</input>', 
-                                                                this.page.rightArrow_inputButtonCreate()    + '</input>');
-        let ltwrap_navLastPrev  = this.lineBlock_packageAndStyle(lt_navLastPrev, '"', 
-                                                                this.page.downArrow_inputButtonCreate()     + '</input>', 
-                                                                this.page.leftArrow_inputButtonCreate()     + '</input>');
-        let ltwrap_position     = this.lineBlock_packageAndStyle(lt_position,    '"', 
-                                                                this.str_buttonStudy,  '</input>');
-        // let ltwrap_body         = this.lineBlock_packageAndStyle(l_termynalBody, 'justify-content:space-between"', str_buttonSeries);
-        let ltwrap_body         = this.lineBlock_packageAndStyle(l_termynalBody, '"', 
-                                                                this.str_buttonSeries + '&nbsp;');
+        let l_termynalHeader    = this.to_termynalResponseGenerate_fromText(
+                                        str_header, 
+                                        false, 
+                                        'style="color: yellow;"'
+                                    );
+        let l_termynalBody      = this.to_termynalResponseGenerate_fromText(
+                                        str_body,   
+                                        true,  
+                                        'style="color: cyan;"'
+                                    );
+        let ltwrap_navFirstNext = this.lineBlock_packageAndStyle(
+                                        lt_navFirstNext, 
+                                        null, 
+                                        '"',
+                                        this.page.upArrow_inputButtonCreate()       + '</input>', 
+                                        this.page.rightArrow_inputButtonCreate()    + '</input>'
+                                    );
+        let ltwrap_navLastPrev  = this.lineBlock_packageAndStyle(
+                                        lt_navLastPrev, 
+                                        null, 
+                                        '"', 
+                                        this.page.downArrow_inputButtonCreate()     + '</input>', 
+                                        this.page.leftArrow_inputButtonCreate()     + '</input>'
+                                    );
+        let ltwrap_position     = this.lineBlock_packageAndStyle(
+                                        lt_position, 
+                                        this.button_process.bind(this), 
+                                        '"', 
+                                        this.str_buttonStudy
+                                    );
+        let ltwrap_body         = this.lineBlock_packageAndStyle(
+                                        l_termynalBody, 
+                                        this.button_process.bind(this),
+                                        '"', 
+                                        this.str_buttonSeries + '&nbsp;'
+                                    );
         let ltwrap_header       = this.lineBlock_packageAndStyle(l_termynalHeader);
 
         this.tprintf(ltwrap_navFirstNext);
@@ -1599,10 +2130,10 @@ TERMynal_PACS.prototype.response_print          = function(pfresponse) {
 }
 
 /////////
-///////// TERMynal_PACSretrieveStatus calling object with some specializations
+///////// TERMynal_PACSretrieve calling object with some specializations
 /////////
 
-function TERMynal_PACSretrieveStatus(str_DOMkey, DOMoutput, d_settings) {
+function TERMynal_PACSretrieve(str_DOMkey, DOMoutput, d_settings) {
     this.help = `
 
         A PACS "specialized" class of the base TERMynal.
@@ -1613,10 +2144,10 @@ function TERMynal_PACSretrieveStatus(str_DOMkey, DOMoutput, d_settings) {
 
 }
 
-TERMynal_PACSretrieveStatus.prototype                 = Object.create(TERMynal.prototype);
-TERMynal_PACSretrieveStatus.prototype.constructor     = TERMynal_PACSretrieveStatus;
+TERMynal_PACSretrieve.prototype                 = Object.create(TERMynal.prototype);
+TERMynal_PACSretrieve.prototype.constructor     = TERMynal_PACSretrieve;
 
-TERMynal_PACSretrieveStatus.prototype.pfresponseError_show    = function(pfresponse) {
+TERMynal_PACSretrieve.prototype.pfresponseError_show    = function(pfresponse) {
     let str_help = `
 
         A simple method for reporting errors in the PACSretrieve interaction.
@@ -1642,7 +2173,7 @@ TERMynal_PACSretrieveStatus.prototype.pfresponseError_show    = function(pfrespo
     this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
 }
 
-TERMynal_PACSretrieveStatus.prototype.response_print          = function(pfresponse) {
+TERMynal_PACSretrieve.prototype.response_print          = function(pfresponse) {
     let str_help = `
 
         PACSretrieveStatus - specific TERMynal response handling.
@@ -1660,7 +2191,7 @@ TERMynal_PACSretrieveStatus.prototype.response_print          = function(pfrespo
     } else {
         this.clear([]);
 
-        let d_result            = pfresponse.json_response.retrieve;
+        let d_result                = pfresponse.json_response.retrieve;
 
         // Find the SeriesInstanceUID in the returned successful command string
         let str_cmd                 = d_result.command;
@@ -1680,7 +2211,17 @@ TERMynal_PACSretrieveStatus.prototype.response_print          = function(pfrespo
             let l_termynalOut           = this.to_termynalResponseGenerate_fromText(str_out, b_trimLeftSpace, 'style="color: lightgreen;"');
             let lt_termynalOut          = this.lineBlock_packageAndStyle(l_termynalOut);
             this.tprintf(lt_termynalOut);
+            d_studySeries               = this.page.rest.msg.queryPFresponse.querySeries_toStudySeriesIndex(
+                                                str_seriesInstanceUID
+                                            );
+            if(d_studySeries.status) {
+                d_toggle = this.studySeriesButton_toggleON(
+                    'getInfo',
+                    d_studySeries
+                );
+            }
             page.DOMpacsControl.style_set('STATUS', {'display': 'block'});
+
         } else {
             let str_out                 = "No SeriesInstanceUID found in retrieve command string!";
             let l_termynalOut           = this.to_termynalResponseGenerate_fromText(str_out, b_trimLeftSpace, 'style="color: red;"');
@@ -1689,6 +2230,83 @@ TERMynal_PACSretrieveStatus.prototype.response_print          = function(pfrespo
         }
 
     }
+}
+
+/////////
+///////// TERMynal_seriesStatus calling object with some specializations
+/////////
+
+function TERMynal_seriesStatus(str_DOMkey, DOMoutput, d_settings) {
+    this.help = `
+
+        A termynal that outputs series status information.
+
+    `;
+
+    TERMynal.call(this, str_DOMkey, DOMoutput, d_settings);
+
+}
+
+TERMynal_seriesStatus.prototype                 = Object.create(TERMynal.prototype);
+TERMynal_seriesStatus.prototype.constructor     = TERMynal_seriesStatus;
+
+TERMynal_seriesStatus.prototype.pfresponseError_show    = function(pfresponse) {
+    let str_help = `
+
+        A simple method for reporting errors in the PACSretrieve interaction.
+
+    `;
+
+    let json_response   = pfresponse.json_response;
+    let str_errorMsg    = json_response.msg;
+    let str_suggest;
+
+    this.clear([]);
+
+    if(str_errorMsg == 'Invalid PACS specified!') {
+        str_suggest     = "Please verify PACS settings using the 'Config PACS' button.";
+    }
+
+    l_termynal          = [
+        '<span data-ty style="color:red;">An error was caught in the PACS interaction!</span>',
+        '<span data-ty style="color:red;">Reported issue was:</span>',
+        '<span data-ty style="color:yellow;">' + str_errorMsg + '</span>',
+        '<span data-ty style="color:yellow;">' + str_suggest  + '</span>',
+    ];
+    this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
+}
+
+TERMynal_seriesStatus.prototype.response_print          = function(pfresponse) {
+    let str_help = `
+
+        Series status specific output response handling.
+
+    `;
+      
+    this.clear([]);
+    let l_termynal              = this.to_termynalResponseGenerate(
+                                        pfresponse,
+                                        'style = "padding: 0px 0px;"'
+                                    );
+    json_response   = pfresponse.json_response;
+    if(json_response.status) {
+        // This specific series exists in the remote server.
+        // We now process the rather ideosyncratic return contents
+        // to extract the SeriesInstanceUID, map it to a
+        // study/series tuple and then update the corresponding button
+        // in the DOM.
+        str_seriesInstanceUID   = json_response.retrieveStatus.seriesUID;
+        d_studySeries           = this.page.rest.msg.queryPFresponse.querySeries_toStudySeriesIndex(
+            str_seriesInstanceUID
+        );
+        if(d_studySeries.status) {
+            d_toggle = this.studySeriesButton_toggleON(
+                                'getInfo',
+                                d_studySeries
+                        );
+        }   
+    }
+    this.tprintf(l_termynal);    
 }
 
 /////////
@@ -1709,6 +2327,11 @@ function Page() {
 
     this.b_jsonSyntaxHighlight      = true;
     document.onkeydown              = this.checkForArrowKeyPress;
+
+    // Link to the REST object that works "in" the page. This object
+    // provides access to various classes, including the transmission
+    // handler and MSG object that constructs payloads for communication.
+    this.rest                       = null;
 
     // Keys parsed from the URL
     this.l_urlParamsBasic = [   
@@ -1756,8 +2379,9 @@ function Page() {
     // DOM keys related to termynal parts of the page
     this.l_termynal = [
         "termynal_pfdcm",
-        "termynal_pacsRetrieveStatus",
-        "termynal_pacs"
+        "termynal_pacsQuery",
+        "termynal_pacsRetrieve",
+        "termynal_seriesStatus"
     ];
 
     this.l_PACScontrol = [
@@ -1777,34 +2401,44 @@ function Page() {
     this.DOMtermynal    = new DOM(this.l_termynal)
     this.DOMpacsControl = new DOM(this.l_PACScontrol);
 
-    this.PACSretrieveStatus_TERMynal  = new TERMynal_PACSretrieveStatus(
-                                        "termynal_pacsRetrieveStatus",
-                                        this.DOMtermynal, 
-                                        {
-                                            "rows":     50,
-                                            "scheme":   "dark",
-                                            "page":     this
-                                        }
-    );
-
-    this.PACS_TERMynal  = new TERMynal_PACS(
-                                        "termynal_pacs",
-                                        this.DOMtermynal, 
-                                        {
-                                            "rows":     50,
-                                            "scheme":   "dark",
-                                            "page":     this
-                                        }
-    );
-
     this.pfdcm_TERMynal = new TERMynal_pfdcm(
-                                        "termynal_pfdcm", 
+        "termynal_pfdcm", 
+        this.DOMtermynal, 
+        {
+            "rows":     50,
+            "scheme":   "dark",
+            "page":     this
+        }
+    );
+
+    this.PACSquery_TERMynal  = new TERMynal_PACSquery(
+        "termynal_pacsQuery",
+        this.DOMtermynal, 
+        {
+            "rows":     50,
+            "scheme":   "dark",
+            "page":     this
+        }
+    );
+
+    this.PACSretrieve_TERMynal  = new TERMynal_PACSretrieve(
+                                        "termynal_pacsRetrieve",
                                         this.DOMtermynal, 
                                         {
                                             "rows":     50,
                                             "scheme":   "dark",
                                             "page":     this
                                         }
+    );
+
+    this.seriesStatus_TERMynal  = new TERMynal_seriesStatus(
+        "termynal_seriesStatus",
+        this.DOMtermynal, 
+        {
+            "rows":     50,
+            "scheme":   "dark",
+            "page":     this
+        }
     );
 
     this.pfdcm_TERMynal.screenClear_setDefault(
@@ -1814,16 +2448,23 @@ function Page() {
         ]
     );
 
-    this.PACSretrieveStatus_TERMynal.screenClear_setDefault(
+    this.PACSretrieve_TERMynal.screenClear_setDefault(
         [
             '<span data-ty="input" data-ty-prompt="#">Output from PACS RETRIEVE status requests appear here...</span>',
             '<span data-ty="input" data-ty-typeDelay="40" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>'
         ]
     );
 
-    this.PACS_TERMynal.screenClear_setDefault(
+    this.PACSquery_TERMynal.screenClear_setDefault(
         [
             '<span data-ty="input" data-ty-prompt="#">Output from PACS appears here...</span>',
+            '<span data-ty="input" data-ty-typeDelay="40" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>'
+        ]
+    );
+
+    this.seriesStatus_TERMynal.screenClear_setDefault(
+        [
+            '<span data-ty="input" data-ty-prompt="#">Output from series status appears here...</span>',
             '<span data-ty="input" data-ty-typeDelay="40" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>'
         ]
     );
@@ -1836,24 +2477,6 @@ function Page() {
         'element':  this.l_termynal,
         'dom':      this.DOMtermynal
     };
-
-    let $accountDelete       = $('#delete-account'),
-    $accountDeleteDialog     = $('#confirm-delete'),
-    transition;
-
-    $accountDelete.on('click', function() {
-        console.log("here!!");
-        $accountDeleteDialog[0].showModal();
-        transition = setTimeout(function() {
-            $accountDeleteDialog.addClass('dialog-scale');
-        }, 0.5);
-    });
-
-    $('#cancel').on('click', function() {
-        $accountDeleteDialog[0].close();
-        $accountDeleteDialog.removeClass('dialog-scale');
-        clearTimeout(transition);
-    });
 
     $( "#helpInfo" ).dialog({
         autoOpen:       false,
@@ -1920,11 +2543,11 @@ Page.prototype = {
 
         `;
 
-        index = this.PACS_TERMynal.currentStudyIndex+1;
-        if(index >= this.PACS_TERMynal.totalNumberOfStudies)
+        index = this.PACSquery_TERMynal.currentStudyIndex+1;
+        if(index >= this.PACSquery_TERMynal.totalNumberOfStudies)
             index = 0;
 
-        this.PACS_TERMynal.response_print(index);
+        this.PACSquery_TERMynal.response_print(index);
     },
 
     leftArrow_inputButtonCreate:        function() {
@@ -1941,11 +2564,11 @@ Page.prototype = {
 
         `;
 
-        index = this.PACS_TERMynal.currentStudyIndex-1;
+        index = this.PACSquery_TERMynal.currentStudyIndex-1;
         if(index < 0)
-            index = this.PACS_TERMynal.totalNumberOfStudies-1;
+            index = this.PACSquery_TERMynal.totalNumberOfStudies-1;
 
-        this.PACS_TERMynal.response_print(index);
+        this.PACSquery_TERMynal.response_print(index);
     },
 
     upArrow_inputButtonCreate:          function() {
@@ -1963,7 +2586,7 @@ Page.prototype = {
         `;
 
         index = 0;
-        this.PACS_TERMynal.response_print(index);
+        this.PACSquery_TERMynal.response_print(index);
     },
 
     downArrow_inputButtonCreate:        function() {
@@ -1980,8 +2603,8 @@ Page.prototype = {
 
         `;
 
-        index = this.PACS_TERMynal.totalNumberOfStudies-1;
-        this.PACS_TERMynal.response_print(index);
+        index = this.PACSquery_TERMynal.totalNumberOfStudies-1;
+        this.PACSquery_TERMynal.response_print(index);
     },
 
     checkForArrowKeyPress:          function(e) {
@@ -1999,22 +2622,23 @@ Page.prototype = {
         e = e || window.event;
 
         if (e.keyCode == '38') {
+            // up arrow
             console.log('up arrow')
             page.upArrow_process();
-            // up arrow
         }
         else if (e.keyCode == '40') {
+            // down arrow
             console.log('down arrow')
             page.downArrow_process();
-            // down arrow
         }
         else if (e.keyCode == '37') {
-            console.log('left arrow')
-            page.leftArrow_process();
            // left arrow
+           console.log('left arrow')
+            page.leftArrow_process();
         }
         else if (e.keyCode == '39') {
-            console.log('right arrow')
+           // right arrow
+           console.log('right arrow')
             page.rightArrow_process();
         }
     },
@@ -2023,16 +2647,16 @@ Page.prototype = {
         let debug           = new Debug("Page.jsonSyntaxHighlight_toggle");
         debug.entering();
         let JSON_syntaxButton_DOM = document.getElementById("JSON_status");
-        debug.vlog({message: 'before toggle: b_jsonSyntaxHighlight', let: this.b_jsonSyntaxHighlight});
+        debug.vlog({message: 'before toggle: b_jsonSyntaxHighlight', var: this.b_jsonSyntaxHighlight});
         this.b_jsonSyntaxHighlight = !this.b_jsonSyntaxHighlight;
-        debug.vlog({message: 'after  toggle: b_jsonSyntaxHighlight', let: this.b_jsonSyntaxHighlight});
+        debug.vlog({message: 'after  toggle: b_jsonSyntaxHighlight', var: this.b_jsonSyntaxHighlight});
         if(this.b_jsonSyntaxHighlight) {
             JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: ON';
-            JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-on';
+            JSON_syntaxButton_DOM.className     = 'pure-button pure-button-primary button-jsonHighlight-on';
         }
         if(!this.b_jsonSyntaxHighlight) {
             JSON_syntaxButton_DOM.innerHTML     = 'JSON syntax highlight: OFF';
-            JSON_syntaxButton_DOM.className     = 'button-xsmall pure-button pure-button-primary button-jsonHighlight-on';
+            JSON_syntaxButton_DOM.className     = 'pure-button pure-button-primary button-orange';
         }
         debug.leaving();
     },
