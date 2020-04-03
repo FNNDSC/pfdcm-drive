@@ -1,3 +1,27 @@
+.fa-icon-innter-text {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    margin: 0;
+    text-align: left;
+}
+
+.boxtext {
+    border:                0px;
+    /* border-color:        white; */
+    background-color:    #282D33;
+    color:               white;
+    margin-top:            auto;
+    /* font-family:           "Fira Mono", 'Consolas'; */
+    position:              relative;
+    margin-bottom:         -3px;
+    margin-left:           84px;
+    margin-right:          84px;
+    padding-left:          20px;
+    border-radius:         5px;
+}
+
 .buttonDownload {
 	display: inline-block;
 	position: relative;
@@ -99,12 +123,14 @@ opacity:0.75;
 
 .formLayout
 {
-background-color: #f3f3f3;
-border: solid 1px #a1a1a1;
-padding: 10px;
-width: 940px;
-margin-left: auto;
-margin-right:auto;
+    /* background-color: #f3f3f3; */
+    background-color: #404346;
+    border: solid 1px #a1a1a1;
+    padding: 10px;
+    width: 940px;
+    margin-left: auto;
+    margin-right:auto;
+    color: white;
 }
 
 .resultLayout
@@ -143,7 +169,7 @@ prebox {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
 .key        { font-family:courier; color: cyan; }
 
 .input {
-font-family: courier;
+    font-family: courier;
 }
 
 .input-dark {
@@ -373,6 +399,19 @@ font-size:      1em;
     background: rgb(202, 25, 25); /* this is a red */
 }
 
+.button-patternflyblue {
+    background: rgb(0, 100, 200); /* this is a patternfly blue */
+
+}
+
+.button-green {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-orange {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
 .button-login {
     background: rgb(28, 184, 65); /* this is a green */
 }
@@ -559,7 +598,7 @@ body {
     font-family: 'Roboto', Arial, sans-serif;
     margin: 0;
     color: #555;
-    background-color: #f5f7fa;
+    background-color: #55575a;
 }
 img {
     max-width: 100%;
