@@ -29,10 +29,14 @@
         
     <div class="formLayout">
     
-        <div>
+        <div class="boxtext pure-control-group" style="margin-bottom: -3px;">
             <!-- Top "navigation" bar -->
             <!-- <button class="button-xsmall button-loginStatus-loggedOut pure-button"     id="loginStatus" onclick="loginStatus_toggle()">login status: unknown</button> -->
-            <button onclick="page.jsonSyntaxHightlight_toggle()" class="button-xsmall pure-button pure-button-primary button-jsonHighlight-on" id="JSON_status">JSON syntax highlight: ON</button>
+            <button onclick = "page.jsonSyntaxHightlight_toggle()" 
+                    class   = "pure-button pure-button-primary button-jsonHighlight-on" 
+                    id      = "JSON_status">
+                    JSON syntax highlight: ON
+            </button>
 
             <!-- <button onclick="useFileDB_toggle()" class="button-xsmall pure-button pure-button-primary button-useFileDB-on" id="useFileDB_status">Use file DB: ON</button>
             <button onclick="createNewDB_toggle()" class="button-xsmall pure-button pure-button-primary button-createNewDB-off" id="createNewDB_status">Create new DB: OFF</button> -->
@@ -44,9 +48,18 @@
                 <input style="width:30px;font-family:courier;font-size:90%;padding-top:0.5em;padding-left:0em;float:left;visibility:hidden;" type="text" maxlength="3" class="onlythree" id="createNewDB_feedsVal" value="4"/>
             </div> -->
 
-            <button class="button-xsmall button-help   pure-button" id="help-opener">help</button>
-            <button class="button-xsmall button-help   pure-button" id="config_pfdcm-opener">Check pfdcm</button>
-            <button class="button-xsmall button-help   pure-button" id="config_PACS-opener">Config PACS</button>
+            <button class   = "button-help   pure-button" 
+                    id      = "help-opener">
+                    help
+            </button>
+            <button class   = "button-help   pure-button" 
+                    id      = "config_pfdcm-opener">
+                    Check pfdcm
+            </button>
+            <button class   = "button-help   pure-button" 
+                    id      = "config_PACS-opener">
+                    Config PACS
+            </button>
             <br>
         </div>
 
@@ -157,30 +170,46 @@
         <form class="pure-form pure-form-aligned">
             <fieldset>
                 <div style="border:0px groove grey; padding: 5px;">
-                    <legend>PACS Query</legend>
+                    <legend style="color: white;">PACS Query</legend>
                     <div class="pure-control-group">
                         <label>PatientID</label>
-                        <input style="width:225px;font-family:courier;" id="PatientID" name="PatientID" value=""/>
+                        <input class="input-dark" style="width:225px;font-family:courier;" id="PatientID" name="PatientID" value=""/>
                         <label>PatientName</label>
-                        <input style="width:225px;font-family:courier;" id="PatientName" name="PatientName" value=""/>
+                        <input class="input-dark" style="width:225px;font-family:courier;" id="PatientName" name="PatientName" value=""/>
                         <label>Accession Number </label>
-                        <input style="width:225px;font-family:courier;" id="AccessionNumber" name="AccessionNumber" value=""/>
+                        <input class="input-dark" style="width:225px;font-family:courier;" id="AccessionNumber" name="AccessionNumber" value=""/>
                         <label>StudyDate</label>
-                        <input style="width:225px;font-family:courier;" id="StudyDate" name="StudyDate" value=""/>
+                        <input class="input-dark" style="width:225px;font-family:courier;" id="StudyDate" name="StudyDate" value=""/>
                         <label>Modality</label>
-                        <input style="width:225px;font-family:courier;" id="Modality" name="Modality" value=""/>                    
+                        <input class="input-dark" style="width:225px;font-family:courier;" id="Modality" name="Modality" value=""/>                    
                         <label>PerformedStationAETitle</label>
-                        <input style="width:225px;font-family:courier;" id="PerformedStationAETitle" name="PerformedStationAETitle" value=""/>                    
+                        <input class="input-dark" style="width:225px;font-family:courier;" id="PerformedStationAETitle" name="PerformedStationAETitle" value=""/>                    
                     </div>
                 </div>
 
-                <div class="pure-control-group" style="display: flex;">
-                    <input type="button" onclick="return page.PACS_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
-                    <input type="button" onclick="return post.do({'operation': 'PACS_query'})" style="float: left;" class="pure-button pure-button-primary button-xsmall" value="QUERY"></input>
-                    <input type="button" id="RETRIEVE" name="RETRIEVE" onclick="return post.do({'operation': 'PACS_retrieve', 'args': {'study': 'all'}})" style="float: left; display: none;" class="pure-button pure-button-primary button-xsmall button-red" value="RETRIEVE all hits"></input>
+                <div class="boxtext pure-control-group" style="display: flex; margin-bottom: -3px;">
+                    <p style="margin-right: 20px;">PACS QUERY</p>
+                    <input  type    = "button" 
+                            onclick = "return page.PACSquery_TERMynal.clear()" 
+                            style   = "float: left;" 
+                            class   = "pure-button pure-button-primary button-patternflyblue" 
+                            value   = "clear terminal"
+                    ></input>
+                    <input  type    = "button" 
+                            onclick = "return post.do({'operation': 'PACS_query'})" 
+                            style   = "float: left;" 
+                            class   = "pure-button pure-button-primary button-patternflyblue" 
+                            value   = "QUERY"
+                    ></input>
+                    <input 
+                            id      = "RETRIEVE" name="RETRIEVE"                                type    = "button" 
+                            onclick = "return post.do({'operation': 'PACS_retrieve', 'args': {'study': 'all'}})"  
+                            class   = "fas fas-download pure-button pure-button-primary button-patternflyblue" 
+                            style   = "font-family: FontAwesome, Arial, Helvetica, sans-serif;float: left; display: none;"
+                            value   = " &#xf019 RETRIEVE all hits"
+                    ></input>
                 </div>
-
-                <div id="termynal_pacs" name="termynal_pacs" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-ty-lineDelay="10" data-termynal data-ty-cursor="_">
+                <div id="termynal_pacsQuery" name="termynal_pacsQuery" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-ty-lineDelay="10" data-termynal data-ty-cursor="_">
                     <span data-ty style="color: lightgreen;" data-ty-prompt="#///">Make sure you have done a 'Config PACS' -- see the button top right.</span>
                     <span data-ty style="color: lightgreen;" data-ty-prompt="#///">Use 'Check pfdcm' to see internal pfdcm server state.</span>
                     <span data-ty style="color: yellow;" data-ty-prompt="#///">Input your search parameters above and hit "QUERY".</span>
@@ -189,17 +218,51 @@
                 </div>
                 <br>
 
-                <div class="pure-control-group" style="display: flex;">
-                    <input type="button" onclick="return page.PACSretrieveStatus_TERMynal.clear()" style="float: left;" class="pure-button pure-button-primary button-xsmall button-termynal-clear" value="clear terminal"></input>
-                    <input type="button" id="STATUS" name="STATUS" onclick="return post.do({'operation': 'PACS_status', 'args': {'study': 'all'}})" style="float: left; display: none;" class="pure-button pure-button-primary button-xsmall button-red" value="STATUS on retrieve"></input>
+                <div class="boxtext pure-control-group" style="display: flex; margin-bottom: -3px;">
+                    <p style="margin-right: 20px;">PACS RETRIEVE</p>
+                    <input  type    = "button" 
+                            onclick = "return page.PACSretrieve_TERMynal.clear()" 
+                            style   = "float: left;" 
+                            class   = "pure-button pure-button-primary button-patternflyblue" 
+                            value   = "clear terminal"
+                    ></input>
+                    <input  type    = "button" 
+                            id      = "STATUS" 
+                            name    = "STATUS" 
+                            onclick = "return post.do({'operation': 'PACS_status', 'args': {'study': 'all'}})" 
+                            style   = "float: left; display: none;" 
+                            class   = "pure-button pure-button-primary button-patternflyblue" 
+                            value   = "STATUS on retrieve"
+                    ></input>
                 </div>
-
-                <div id="termynal_pacsRetrieveStatus" name="termynal_pacsRetrieveStatus" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-ty-lineDelay="10" data-termynal data-ty-cursor="_">
+                <div id="termynal_pacsRetrieve" name="termynal_pacsRetrieve" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-ty-lineDelay="10" data-termynal data-ty-cursor="_">
                     <span data-ty data-ty-prompt="#///">Output from PACS RETRIEVE status requests appear here.</span>
                     <span data-ty="input" data-ty-typeDelay="10" data-ty-lineDelay="15" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
                 </div>
                 <br>
 
+                <div class="boxtext pure-control-group" style="display: flex; margin-bottom: -3px;">
+                    <p style="margin-right: 20px;">SERIES STATUS</p>
+                    <input  type    = "button" 
+                            onclick = "return page.seriesStatus_TERMynal.clear()" 
+                            style   = "float: left;" 
+                            class   = "pure-button pure-button-primary button-patternflyblue" 
+                            value   = "clear terminal"
+                    ></input>
+                    <input  type    = "button" 
+                            id      = "STATUS" 
+                            name    = "STATUS" 
+                            onclick = "return post.do({'operation': 'PACS_status', 'args': {'study': 'all'}})" 
+                            style   = "float: left; display: none;" 
+                            class   = "pure-button pure-button-primary button-patternflyblue 
+                            value   = "STATUS on retrieve"
+                    ></input>
+                </div>
+                <div id="termynal_seriesStatus" name="termynal_seriesStatus" style="margin-left: auto; margin-right: auto; font-size: .8em;" data-ty-lineDelay="10" data-termynal data-ty-cursor="_">
+                    <span data-ty data-ty-prompt="#///">Output from series status requests appear here.</span>
+                    <span data-ty="input" data-ty-typeDelay="10" data-ty-lineDelay="15" style="color: cyan;"data-ty-prompt="">...W A I T I N G...</span>
+                </div>
+                <br>
 
                 <button onclick="window.location.reload(true)" class="pure-button pure-button-primary button-reset">Reset</button>
 
@@ -211,7 +274,7 @@
 
     <div class="modal"><!-- Place at bottom of page --></div>
     
-    <script src="termynal.js" data-termynal-container="#termynal_pfdcm|#termynal_pacs|#termynal_pacsRetriveStatus"></script>
+    <script src="termynal.js" data-termynal-container="#termynal_pfdcm|#termynal_pacsQuery|#termynal_pacsRetriveStatus"></script>
     <script src="pfdcm-drive.js"></script>
 
 </body>
