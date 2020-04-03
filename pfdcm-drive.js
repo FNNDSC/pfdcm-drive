@@ -1368,7 +1368,7 @@ REST.prototype = {
                                             break;
                 case 'PACS_retrieve':       this.PACS_retrieve(d_op['args']);
                                             break;
-                case 'studySeries_status':  this.studySeries_status(d_op['args]');
+                case 'studySeries_status':  this.studySeries_status(d_op['args']);
                                             break;
             }
         }
