@@ -23,11 +23,13 @@
 </head>
 
 <body>
+
     <div>
         <h2 class="formLayout">PACS Q/R using a ChRIS <tt>pfdcm</tt> service</h2>
     </div>
         
     <div class="formLayout">
+        <img src="logo.png" >
     
         <div class="boxtext pure-control-group" style="margin-bottom: -3px;">
             <!-- Top "navigation" bar -->
@@ -36,6 +38,11 @@
                     class   = "pure-button pure-button-primary button-jsonHighlight-on" 
                     id      = "JSON_status">
                     JSON syntax highlight: ON
+            </button>
+            <button onclick = "page.anonDataMask_toggle()" 
+                    class   = "pure-button pure-button-primary button-jsonHighlight-off" 
+                    id      = "ANON_status">
+                    ANON mask: OFF
             </button>
 
             <!-- <button onclick="useFileDB_toggle()" class="button-xsmall pure-button pure-button-primary button-useFileDB-on" id="useFileDB_status">Use file DB: ON</button>
@@ -166,6 +173,15 @@
                 </fieldset>
             </form>
         </div>            
+
+        <dialog id="seriesModalDialog">
+            <h3 class="modal-header">Series information</h3>
+            <div class="modal-body" id="seriesModalDialogBody">
+            </div>
+            <footer class="modal-footer">
+            </footer>
+            <button id="close" class="close" type="button">&times;</button>
+        </dialog>
 
         <form class="pure-form pure-form-aligned">
             <fieldset>
