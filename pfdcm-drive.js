@@ -82,18 +82,18 @@ Debug.prototype = {
 
     vlog:           function (d) {
         this.argcheck(d);
-        if (typeof (this.let) === 'object') {
+        if (typeof (this.var) === 'object') {
             console.log(
                 this.indent()               + 
                 'In ' + this.functionName   + 
                 ': ' + d.message + ' = '
             );
-            console.log(d.let);
+            console.log(d.var);
         } else
             console.log(
                 this.indent()               + 
                 'In ' + this.functionName   + 
-                ': ' + d.message    + ' = ' + d.let);
+                ': ' + d.message    + ' = ' + d.var);
     },
 
     log:            function (d) {
@@ -167,6 +167,12 @@ DOM.prototype = {
         }
     },
 
+    type_set:           function(str_key, typeSet) {
+        if(this.l_DOM.includes(str_key)) {
+            document.getElementById(str_key).type = typeSet;
+        }
+    },
+
     set:                function(str_key, str_val) {
         if(this.l_DOM.includes(str_key)) {
             $('#'+str_key).val(str_val)
@@ -235,6 +241,7 @@ function PACSRetrieve() {
 PACSRetrieve.prototype = {
     constructor:    URL,
 
+    // PACSRetrieve.prototype
     series_isInQueue:   function(str_seriesUID) {
 
         let str_help    = `
@@ -248,6 +255,7 @@ PACSRetrieve.prototype = {
 
     },
 
+    // PACSRetrieve.prototype
     retrieve_push:      function(ol_dataRetrieve, ol_dataInfo) {
         /*
             ol_data:    list of objects to process
@@ -478,8 +486,9 @@ function MSG(d_comms) {
             *   it has a concept of where in the DOM to "write" results
             
         In this fashion, the MSG object is the proverbial contact surface 
-        between idiosyncracies of the remote service (the actual message 
-        construct that the service understands) and also needs to know what
+        between idiosyncracies of the remote service ('pfdcm' and how to speak
+        to it, as well as understanding its responses) and the vagrancies of
+        this specific JS/web app. This object thus also needs to know what
         element on the main HTML page is associated with the results of this
         message.
 
@@ -508,6 +517,12 @@ function MSG(d_comms) {
      // A string key linking this message object to a component 
      // on the HTML page
      this.str_DOMkey        = '';
+
+     // A dictionary object to hold some "meta" data for additional
+     // fine-tuned behaviour
+     this.d_meta            = {
+         'modalDialog':     false
+     }
 }
 
 MSG.prototype = {
@@ -529,6 +544,7 @@ MSG.prototype = {
                this.d_comms['path']);
     },
 
+    // MSG.prototype
     hello:                      function() {
         str_help = `
 
@@ -550,6 +566,7 @@ MSG.prototype = {
         return(d_msg);    
     },
 
+    // MSG.prototype
     pfdcm_get:                  function() {
         str_help = `
 
@@ -571,6 +588,7 @@ MSG.prototype = {
         return(d_msg);    
     },
 
+    // MSG.prototype
     pfdcm_set:                  function() {
         str_help = `
 
@@ -611,6 +629,7 @@ MSG.prototype = {
         return(d_msg);    
     },
 
+    // MSG.prototype
     queryFields_determine:      function() {
         let str_help = `
 
@@ -628,6 +647,7 @@ MSG.prototype = {
         return(d_query);
     },
 
+    // MSG.prototype
     PACS_query:                  function() {
         let str_help = `
 
@@ -658,6 +678,7 @@ MSG.prototype = {
         return(d_msg);    
     },
 
+    // MSG.prototype
     PACS_allStudiesRetrieveSpec:    function(d_args) {
         let str_help = `
 
@@ -666,39 +687,54 @@ MSG.prototype = {
         `;
     },
 
-    PACS_wholeStudyRetrieveSpec:    function(d_args) {
+    // MSG.prototype
+    PACS_wholeStudyRetrieveSpec:    function(d_args, lmap_retrieveSpec, lmap_infoSpec) {
         let str_help = `
 
-            Create a list of all the series in a given study.
+            Create a list of all the series in a given study that are not
+            "inFlight" or "alreadyRetrieved".
 
         `;
 
         let studyIndex              = d_args.study;
-        let report                  = this.pfresponse.json_response.query.report.json[studyIndex];
+        let report                  = this.queryPFresponse.json_response.query.report.json[studyIndex];
         let numSeries               = report.body.length;
-        let ld_retrieve             = [];
-        let ld_info                 = [];
         let d_ret                   = {
                                         'status':           false,
                                         'ld_retrieveSpec':  [],
                                         'ld_info':          []
                                     }
-        for(const series = 0; series++; series < numSeries ) {
-            d_args.series   = series;
-            d_retrieve      = this.PACS_singleSeriesRetrieveSpec(   
-                                                                d_args, 
-                                                                lmap_retrieveSpec,
-                                                                lmap_infoSpec
-                                                            );
-            if(d_retrieve.status) {
-                d_ret.status    = true;
-                d_ret.ld_retrieve.concat(d_retrieve.ld_retrieveSpec);
-                d_ret.ld_info.concat(d_retrieve.ld_info);
+        for(let series = 0; series < numSeries; series++ ) {
+            d_args.series    = series;
+            let str_buttonOn = this.page.PACSquery_TERMynal.studySeriesButton_whichStateIsOn(d_args);
+            if(str_buttonOn === "retrieve") {
+                this.page.PACSquery_TERMynal.studySeriesButton_toggleON(
+                                                                    'getInFlightStatus', 
+                                                                    d_args
+                );
+                d_retrieve      = this.PACS_singleSeriesRetrieveSpec(   
+                                                                    d_args, 
+                                                                    lmap_retrieveSpec,
+                                                                    lmap_infoSpec
+                                                                );
+                if(d_retrieve.status) {
+                    d_ret.status            = true;
+                    d_ret.ld_retrieveSpec   = d_ret.ld_retrieveSpec.concat(d_retrieve.ld_retrieveSpec);
+                    d_ret.ld_info           = d_ret.ld_info.concat(d_retrieve.ld_info);
+                }
             }
         }
+        // Toggle the state of the study-only button.
+        this.page.PACSquery_TERMynal.studySeriesButton_toggleON(
+            'getInFlightStatus',
+            {
+                'study':    d_args.study
+            }
+        );
         return(d_ret);
     },
 
+    // MSG.prototype
     PACS_singleSeriesRetrieveSpec:  function(d_args, lmap_retrieveSpec, lmap_infoSpec) {
         let str_help = `
 
@@ -717,6 +753,7 @@ MSG.prototype = {
         return(this.pfresponse.pacsretrieve.retrieve_push(lmap_retrieveSpec, lmap_infoSpec));
     },
 
+    // MSG.prototype
     PACS_fieldsGetOnStudySeries:    function(d_args) {
         let str_help = `
 
@@ -757,6 +794,7 @@ MSG.prototype = {
         return(d_ret);
     },
 
+    // MSG.prototype
     PACS_retrieveParse:             function(d_args) {
         let str_help = `
 
@@ -806,6 +844,7 @@ MSG.prototype = {
         return(d_retrieve);
     },
 
+    // MSG.prototype
     PACS_status:                    function(d_args) {
         let str_help = `
             Send a "retrieveStatus" on a given SeriesInstanceUID            
@@ -826,6 +865,7 @@ MSG.prototype = {
         return(d_msg);    
     },
 
+    // MSG.prototype
     PACS_retrieve:                  function(d_args, d_info) {
         let str_help = `
 
@@ -833,6 +873,12 @@ MSG.prototype = {
 
             Since the pfdcm backend retrieves on a per-study level
 
+            Input:
+            d_args = {
+                'series_uid':       <seriesInstanceUID>
+            }
+
+            d_info = Info to display in the PACS RETRIEVE termynal.
         `;
 
         // Build the schemeAuthPath at message compose since
@@ -861,7 +907,7 @@ MSG.prototype = {
         return(d_msg);    
     },
 
-
+    // MSG.prototype
     response_print:                 function() {
 
         if(this.str_DOMkey == 'termynal_pfdcm') {
@@ -880,7 +926,7 @@ MSG.prototype = {
                 pfresponse.set(response);
                 pfresponse.parse();
                 this.page.seriesStatus_TERMynal.response_print(pfresponse);
-            }
+            } 
         }
     }
 }
@@ -907,6 +953,7 @@ function AJAX(Msg) {
 AJAX.prototype = {
     constructor:    AJAX,
 
+    // AJAX.prototype
     onError_callBack:       function (xhdr, textStatus, thrownError) {
         hdr = null;
         console.log('Some error was triggered.');
@@ -920,18 +967,21 @@ AJAX.prototype = {
         hdr = xhdr;
     },
 
+    // AJAX.prototype
     onBefore_callBack:      function () {
         let debug = new Debug("AJAX.onBefore_callback");
         debug.entering();
         debug.leaving();
     },
 
+    // AJAX.prototype
     onComplete_callBack:    function (jqXHR, textStatus) {
         let debug = new Debug("AJAX.onComplete_callBack");
         debug.entering();
         debug.leaving();
     },
 
+    // AJAX.prototype
     onSuccess_callBack:     function (SRVresp, textStatus, jqXHR) {
         /*
             This is an asynchronous function, so when a button in UI
@@ -947,6 +997,7 @@ AJAX.prototype = {
         debug.leaving();
     },
 
+    // AJAX.prototype
     transmitAndProcess: function (payload) {
         $.ajax({
             type:           this.TX.d_comms['VERB'],
@@ -986,6 +1037,7 @@ function Fetch(Msg) {
 Fetch.prototype = {
     constructor: Fetch,
 
+    // Fetch.prototype 
     postData:                       async function (url = '', data = {}) {
         let str_help = `
 
@@ -1004,6 +1056,7 @@ Fetch.prototype = {
         return this.response.text();
     },
 
+    // Fetch.prototype 
     checkFirstForErrorsInResponse:  function (response) {
         let debug = new Debug("Fetch.checkFirstForErrorsInResponse");
         debug.entering();
@@ -1020,6 +1073,7 @@ Fetch.prototype = {
         return response;
     },
 
+    // Fetch.prototype 
     queryResponse_handle:       function(response) {
         let str_help = `
 
@@ -1045,6 +1099,7 @@ Fetch.prototype = {
         debug.leaving();
     },
 
+    // Fetch.prototype 
     seriesResponse_handle:      function(response) {
         let str_help = `
 
@@ -1074,6 +1129,7 @@ Fetch.prototype = {
 
     },
 
+    // Fetch.prototype 
     handleReponse:              function (response) {
         let debug = new Debug("Fetch.handleResponse");
         debug.entering();
@@ -1089,6 +1145,7 @@ Fetch.prototype = {
         return response;
     },
 
+    // Fetch.prototype 
     handleErrorsInFetch:  async function (response) {
         let debug = new Debug("Fetch.handleErrorsInFetch");
         debug.entering();
@@ -1106,6 +1163,7 @@ Fetch.prototype = {
         return await response.text();
     },
 
+    // Fetch.prototype 
     fetch_retry:    async (url, options, n) => {
         let debug = new Debug("Fetch.fetch_retry");
         debug.entering();
@@ -1122,6 +1180,7 @@ Fetch.prototype = {
         throw error;
     },
 
+    // Fetch.prototype 
     transmitAndProcess: async function (payload) {
         let debug = new Debug("Fetch.transmitAndProcess");
         debug.entering();
@@ -1200,6 +1259,7 @@ function REST(d_comms) {
 REST.prototype = {
     constructor:            REST,
 
+    // REST.protoype
     hello:                      function() {
         let str_help = `
             Say hello to pfdcm
@@ -1207,6 +1267,7 @@ REST.prototype = {
         this.transmitAndProcess(this.msg.hello());
     },
 
+    // REST.protoype
     pfdcm_get:                  function() {
         let str_help = `
             Get internal state of pfdcm
@@ -1214,6 +1275,7 @@ REST.prototype = {
         this.transmitAndProcess(this.msg.pfdcm_get());
     },
 
+    // REST.protoype
     pfdcm_set:                  function() {
         let str_help = `
             Set pfdcm internals based on the contents of page input fields.
@@ -1221,6 +1283,7 @@ REST.prototype = {
         this.transmitAndProcess(this.msg.pfdcm_set());
     },
 
+    // REST.protoype
     PACS_query:                 function() {
         let str_help = `
             Do a PACS Query.
@@ -1231,6 +1294,7 @@ REST.prototype = {
         str_queryResponse = this.transmitAndProcess(this.msg.PACS_query());
     },
 
+    // REST.protoype
     PACS_status:                function(d_args) {
         let str_help = `
             Do a PACS status request.
@@ -1248,6 +1312,7 @@ REST.prototype = {
         this.transmitAndProcess(this.msg.PACS_status(d_args));        
     },
 
+    // REST.protoype
     studySeries_statusCheck:    function(d_args) {
         let str_help    = `
             Entry point for checking on the status of a specific series,
@@ -1292,7 +1357,10 @@ REST.prototype = {
             if(b_inQueue) {
                 // If inQueue, then we populate the return object with 
                 // 'inQueue' state. The caller can immediately update local
-                // state synchronously based on this information.
+                // state synchronously based on this information. Note that
+                // this logic is a bit superfluous since the "inQueue" is
+                // also indicated by the button changing visually as part of
+                // the retrieve onClick.
                 d_ret.status    = true;
                 d_ret.state     = 'inQueue'
             } else {
@@ -1308,6 +1376,7 @@ REST.prototype = {
         return d_ret;
     },
 
+    // REST.protoype
     PACS_retrieve:              function(d_args) {
         let str_help = `
             Do a PACS Retrieve.
@@ -1333,9 +1402,13 @@ REST.prototype = {
         }
     },
 
-    studySeries_status:         function(d_args) {
+    // REST.protoype
+    studySeries_statusInFlight:         function(d_args) {
         let str_help = `
-            Call a status on a given study/series tuple.
+            Call a status on a given study/series that is still 
+            "InFlight". In other words, an asynchronous receive
+            is busy happening. This method simply generates some
+            useful output for the user.
 
             Input:
             d_args = {
@@ -1345,16 +1418,49 @@ REST.prototype = {
 
         `;
 
-        let zip             = (a,b) => a.map((x,i) => [x, b[i]]);
-        let d_retrieve      = this.msg.PACS_retrieveParse(d_args);
+        let d_seriesInfo    = this.msg.PACS_fieldsGetOnStudySeries(
+            d_args
+        );
 
-        if(d_retrieve.status) {
-            for(const [d_on, d_info] of zip(d_retrieve.ld_retrieveSpec, d_retrieve.ld_info)) {
-                this.transmitAndProcess(this.msg.PACS_retrieve(d_on, d_info));
-            }
-        }
+        // for this method, trigger a modal display of info that
+        // is ultimately handled by the TERMynal
+        this.msg.d_meta.modalDialog     = true;
+
+        this.msg.page.PACSquery_TERMynal.seriesStatus_modalShow(d_seriesInfo)
     },
 
+    // REST.protoype
+    studySeries_statusOnReceipt:         function(d_args) {
+        let str_help = `
+            Call a status on a given study/series tuple by communicating
+            with the remote server. This is called to determine status
+            *after* a retrieve call has completed on the server and
+            data has been received by the server.
+
+            Input:
+            d_args = {
+                'study':    (int)studyIndex,
+                'series':   (int)seriesIndex
+            }
+
+        `;
+
+        let d_seriesInfo    = this.msg.PACS_fieldsGetOnStudySeries(
+            d_args
+        );
+
+        let d_series        = {
+            'series_uid':   d_seriesInfo.SeriesInstanceUID
+        }
+
+        // for this method, trigger a modal display of info that
+        // is ultimately handled by the TERMynal
+        this.msg.d_meta.modalDialog     = true;
+
+        this.PACS_status(d_series);
+    },
+
+    // REST.protoype
     do:                         function(d_op) {
         if('operation' in d_op) {
             switch(d_op['operation']) {
@@ -1368,12 +1474,17 @@ REST.prototype = {
                                             break;
                 case 'PACS_retrieve':       this.PACS_retrieve(d_op['args']);
                                             break;
-                case 'studySeries_status':  this.studySeries_status(d_op['args']);
+                case 'studySeries_statusInFlight':  
+                                            this.studySeries_statusInFlight(d_op['args']);
+                                            break;
+                case 'studySeries_statusOnReceipt':  
+                                            this.studySeries_statusOnReceipt(d_op['args']);
                                             break;
             }
         }
     },
 
+    // REST.protoype
     transmitAndProcess: function(payload) {
         return this.clientAPI.transmitAndProcess(payload);
     },
@@ -1425,6 +1536,7 @@ TERMynal.prototype = {
         this.l_screenClearDefault   = l_lines;
     },
 
+    // TERMynal.prototype
     clear:                  function(l_screenLines) {
         let str_help = `
         
@@ -1444,6 +1556,7 @@ TERMynal.prototype = {
         this.page.DOMtermynal.innerHTML_listset(this.str_DOMkey, l_lines);
     },
 
+    // TERMynal.prototype
     syntaxHighlight:            function(json, ab_subSpaces = false) {
         let str_help = `
 
@@ -1472,6 +1585,7 @@ TERMynal.prototype = {
         });
     },
 
+    // TERMynal.prototype
     to_termynalResponseGenerate_fromText:   function(str_text, ab_trimLeft, astr_style) {
         let str_help = `
 
@@ -1500,6 +1614,7 @@ TERMynal.prototype = {
         return(l_termynal);
     },
 
+    // TERMynal.prototype
     to_termynalResponseGenerate:    function(pfresponse, astr_style) {
         let str_help = `
 
@@ -1547,6 +1662,7 @@ TERMynal.prototype = {
         return(l_termynal);
     },
 
+    // TERMynal.prototype
     sprintf:                    function(al_lines, 
                                             ab_trimLeft         = false, 
                                             astr_groupStyle     = '',
@@ -1569,6 +1685,7 @@ TERMynal.prototype = {
         return(l_termynal);
     },
 
+    // TERMynal.prototype
     ltag_wrapLineGroup:         function(astr_prefix, al_lines, astr_suffix) {
         let str_help = `
 
@@ -1588,6 +1705,47 @@ TERMynal.prototype = {
         return(l_termynal);
     },
 
+    // TERMynal.prototype
+    studySeriesButton_whichStateIsOn:   function(d_args) {
+        let str_help = `
+
+            This method returns which of the three possible
+            button states is currently "ON", i.e. being
+            displayed in the UI.
+
+            The button state is one of:
+
+                    - retrieve
+                    - getInFlightStatus
+                    - getInfo
+        
+            Input:
+            d_args = {
+                'study':        <int>study,
+                'series':       <int>series
+            }
+
+            Return:
+            <str_buttonState>
+        `;
+
+        let l_buttonSpec    = ['retrieve', 'getInFlightStatus', 'getInfo'];
+        let str_buttonOn    = "";
+        let str_DOMbase     = 'Study-' + d_args.study; 
+        if('series' in d_args) {
+            str_DOMbase     += '-Series-' + d_args.series;
+        }
+        for(str_button of l_buttonSpec) {
+            buttonHTML      = document.getElementById(str_DOMbase + '-' + str_button);
+            if(buttonHTML.style.display === 'block' || buttonHTML.style.display === "") {
+                str_buttonOn    = str_button;
+                break;
+            }
+        }
+        return str_buttonOn;
+    },
+
+    // TERMynal.prototype
     studySeriesButton_toggleON:         function(astr_display, d_args) {
 
         let str_help = `
@@ -1595,6 +1753,9 @@ TERMynal.prototype = {
             Toggle the visible state of a specific study/series
             button. For a given 'display' choice, set that
             button to 'block' and the others to 'none'.
+
+            If the <d_args> does not contain a 'series' key, then
+            change the study button.
 
             <buttonChoiceToMakeVisible> is one of:
 
@@ -1621,7 +1782,10 @@ TERMynal.prototype = {
         let l_buttonSpec        = ['retrieve', 'getInFlightStatus', 'getInfo'];
         
         if(l_buttonSpec.includes(astr_display)) {
-            let str_DOMbase     = 'Study-' + d_args.study + '-Series-' + d_args.series; 
+            let str_DOMbase     = 'Study-' + d_args.study; 
+            if('series' in d_args) {
+                str_DOMbase     += '-Series-' + d_args.series;
+            }
             for(str_button of l_buttonSpec) {
                 buttonHTML      = document.getElementById(str_DOMbase + '-' + str_button);
                 if(str_button === astr_display) {
@@ -1636,6 +1800,7 @@ TERMynal.prototype = {
         return d_ret;
     },
 
+    // TERMynal.prototype
     studySeriesButton_processDOMid:     function(d_args) {
         let str_help = `
     
@@ -1690,6 +1855,7 @@ TERMynal.prototype = {
 
     },
 
+    // TERMynal.prototype
     studySeriesButton_processOnClick:  function(d_args) {
         let str_help = `
     
@@ -1726,8 +1892,8 @@ TERMynal.prototype = {
         let seriesCount         = d_args.series;
         let d_contextMap        = {
             'retrieve':             'PACS_retrieve',
-            'getInFlightStatus':    'PACS_status',
-            'getInfo':              'studySeries_status'
+            'getInFlightStatus':    'studySeries_statusInFlight',
+            'getInfo':              'studySeries_statusOnReceipt'
         }
 
         if(str_button.includes('/StudyIndex') && !str_button.includes('/SeriesCount')) {
@@ -1759,6 +1925,7 @@ TERMynal.prototype = {
         return d_ret;
     },
 
+    // TERMynal.prototype
     button_process:             function(astr_button, currentSeriesIndex) {
         let str_help = `
             
@@ -1800,6 +1967,7 @@ TERMynal.prototype = {
             return d_buttonRet.buttonHTML;
     },
 
+    // TERMynal.prototype
     lineBlock_packageAndStyle:  function(   al_lines, 
                                             af_perLineFunc      = null,
                                             astr_groupStyle     = '"', 
@@ -1822,6 +1990,7 @@ TERMynal.prototype = {
         return(l_divBlock);
     },
 
+    // TERMynal.prototype
     ltag_wrapEachLine:          function(astr_prefix, f_prefix, al_lines, astr_suffix) {
         let str_help = `
 
@@ -1861,6 +2030,7 @@ TERMynal.prototype = {
         return(l_termynal);
     },
 
+    // TERMynal.prototype
     tprintf:                    function(al_lines) {
         let str_help = `
 
@@ -1933,7 +2103,7 @@ function TERMynal_PACSquery(str_DOMkey, DOMoutput, d_settings) {
                                                     fas fas-download"></input>
                                 <input type     =  "button" 
                                         onclick =  "getInFlightStatus"
-                                        value   =  "&#xf0ae /StudyIndex1/./SeriesCount1/ " 
+                                        value   =  "&#xf0ae /StudyIndex1/ " 
                                         style   =  "font-family: FontAwesome, monospace;  
                                                     padding: .1em .4em;
                                                     display: none;"
@@ -1944,7 +2114,7 @@ function TERMynal_PACSquery(str_DOMkey, DOMoutput, d_settings) {
                                                     fas fas-tasks"></input>
                                 <input type     =  "button" 
                                         onclick =  "getInfo"
-                                        value   =  "&#xf05a /StudyIndex1/./SeriesCount1/ " 
+                                        value   =  "&#xf05a /StudyIndex1/ " 
                                         style   =  "font-family: FontAwesome, monospace;  
                                                     padding: .1em .4em;
                                                     display: none;"
@@ -2020,6 +2190,88 @@ TERMynal_PACSquery.prototype.pfresponseError_show    = function(pfresponse) {
     this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
 }
 
+TERMynal_PACSquery.prototype.seriesStatus_modalShow  = function(json_data) {
+    let str_help = `
+
+        A simple modal window with information on a given series.
+
+    `;
+
+    const modal     = document.getElementById('seriesModalDialog');
+    const close     = document.getElementById('close');
+    const modalBody = document.getElementById('seriesModalDialogBody');
+
+    modal.showModal();
+
+    modalBody.innerHTML = `
+        <table>
+        <caption><span class="blinking">IN FLIGHT</span></caption>
+        <tbody>
+            <tr>
+                <td>Study Description</td><td>`     + json_data.StudyDescription    + `</td>
+            </tr>
+            <tr>
+                <td>StudyInstanceUID</td><td>`      + json_data.StudyInstanceUID    + `</td>
+            </tr>
+            <tr>
+                <td>Series Description</td><td>`    + json_data.SeriesDescription   + `</td>
+            </tr>
+            <tr>
+                <td>SeriesInstanceUID</td><td>`     + json_data.SeriesInstanceUID   + `</td>
+            </tr>
+        </tbody>
+        </table>
+    `;
+
+    close.addEventListener('click', () => {
+        modal.close('cancelled');
+    })
+
+    modal.addEventListener('cancel', () => {
+        modal.close('cancelled');
+    });
+      
+    // close when clicking on backdrop
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.close('cancelled');
+        }
+    });   
+}
+
+TERMynal_PACSquery.prototype.header_anonymize       = function(str_header) {
+    const str_help = `
+        If the ANON mask is ON, then this method will "anonymize" 
+        the display of the header. Essentially, the method simply 
+        processes the text report and returns a lightly edited 
+        version of the same.
+
+        Note that this "anonymization" is not in place. If the
+        header is aleady "printed", toggling the ANON mask ON will
+        only affect the next display of header information.
+
+        Return:
+        An edited version of the input <str_header>.
+    `;
+
+    const l_header          = str_header.split('\n');
+    const l_headerAnon      = [];
+    for(let str_headerLine of l_header) {
+        for(let str_headerField of this.page.l_PACSQRanon) {
+            if(str_headerLine.includes(str_headerField)) {
+                let l_keyValue          = str_headerLine.split(str_headerField);
+                str_PHI             = l_keyValue[1];
+                str_clean           = str_PHI.replace(/\S/gi,  '*');
+                str_clean           = str_clean.slice(0, -4);
+                str_headerLine      = l_keyValue[0] + str_headerField + str_clean;
+            }
+        }
+        l_headerAnon.push(str_headerLine);
+    }
+    const str_headerAnon    = l_headerAnon.join('\n');
+    return str_headerAnon;
+},
+
 TERMynal_PACSquery.prototype.response_print          = function(pfresponse) {
     let str_help = `
 
@@ -2077,6 +2329,9 @@ TERMynal_PACSquery.prototype.response_print          = function(pfresponse) {
                                         'style="color: fuchsia;"'
                                     );
         let str_header          = d_report['header'];
+        if(this.page.b_anonDataMask) {
+            str_header          = this.header_anonymize(str_header);
+        }
         let str_body            = d_report['body'];
         str_body                = str_body.replace(/SeriesDescription/gi, '');
         let l_termynalHeader    = this.to_termynalResponseGenerate_fromText(
@@ -2276,37 +2531,111 @@ TERMynal_seriesStatus.prototype.pfresponseError_show    = function(pfresponse) {
     this.DOMoutput.innerHTML_listadd(this.str_DOMkey, l_termynal);
 }
 
+TERMynal_seriesStatus.prototype.seriesStatus_modalShow  = function(json_data) {
+    let str_help = `
+
+        A simple modal window with information on a given series.
+
+    `;
+
+    const modal     = document.getElementById('seriesModalDialog');
+    const close     = document.getElementById('close');
+    const modalBody = document.getElementById('seriesModalDialogBody');
+
+
+    let d_retrieve              = json_data.retrieveStatus;
+    let str_msg                 = d_retrieve.msg;
+    let str_seriesInstanceUID   = d_retrieve.seriesUID;
+    let numDCMfiles             = d_retrieve.numDCMfiles;
+    let d_studySeries           = this.page.rest.msg.queryPFresponse.querySeries_toStudySeriesIndex(
+                                        str_seriesInstanceUID
+                                    );
+    let d_fields                = this.page.rest.msg.PACS_fieldsGetOnStudySeries(d_studySeries);
+
+    modal.showModal();
+
+    modalBody.innerHTML = `
+        <table>
+        <caption>` + str_msg + `</caption>
+        <tbody>
+            <tr>
+                <td>Study Description</td><td>`     + d_fields.StudyDescription     + `</td>
+            </tr>
+            <tr>
+                <td>StudyInstanceUID</td><td>`      +  d_fields.StudyInstanceUID    + `</td>
+            </tr>
+            <tr>
+                <td>Series Description</td><td>`    + d_fields.SeriesDescription    + `</td>
+            </tr>
+            <tr>
+                <td>SeriesInstanceUID</td><td>`     + str_seriesInstanceUID         + `</td>
+            </tr>
+            <tr>
+                <td>Number of Received Images</td><td>` + numDCMfiles               + `</td>
+            </tr>
+        </tbody>
+        </table>
+    `;
+
+    close.addEventListener('click', () => {
+        modal.close('cancelled');
+    })
+
+    modal.addEventListener('cancel', () => {
+        modal.close('cancelled');
+    });
+      
+    // close when clicking on backdrop
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.close('cancelled');
+        }
+    });   
+
+},
+
 TERMynal_seriesStatus.prototype.response_print          = function(pfresponse) {
     let str_help = `
 
-        Series status specific output response handling.
+        Series status specific output response handling, as well
+        as modal data print conditional handling.
 
     `;
       
     this.clear([]);
-    let l_termynal              = this.to_termynalResponseGenerate(
-                                        pfresponse,
-                                        'style = "padding: 0px 0px;"'
-                                    );
-    json_response   = pfresponse.json_response;
-    if(json_response.status) {
-        // This specific series exists in the remote server.
-        // We now process the rather ideosyncratic return contents
-        // to extract the SeriesInstanceUID, map it to a
-        // study/series tuple and then update the corresponding button
-        // in the DOM.
-        str_seriesInstanceUID   = json_response.retrieveStatus.seriesUID;
-        d_studySeries           = this.page.rest.msg.queryPFresponse.querySeries_toStudySeriesIndex(
-            str_seriesInstanceUID
-        );
-        if(d_studySeries.status) {
-            d_toggle = this.studySeriesButton_toggleON(
-                                'getInfo',
-                                d_studySeries
-                        );
-        }   
+    // Print the actual text of the pfresponse
+    this.tprintf(
+            this.to_termynalResponseGenerate(
+                            pfresponse,
+                            'style = "padding: 0px 0px;"'
+            )
+    );
+    json_response       = pfresponse.json_response;
+
+    if(this.page.rest.msg.d_meta.modalDialog) {
+        // Here we use an html5 modal to nicely show some additional
+        // status data
+        this.seriesStatus_modalShow(json_response);
+        this.page.rest.msg.d_meta.modalDialog = false;
+    } else {
+        if(json_response.status) {
+            // This specific series exists in the remote server.
+            // We now process the rather ideosyncratic return contents
+            // to extract the SeriesInstanceUID, map it to a
+            // study/series tuple and then update the corresponding button
+            // in the DOM.
+            str_seriesInstanceUID   = json_response.retrieveStatus.seriesUID;
+            d_studySeries           = this.page.rest.msg.queryPFresponse.querySeries_toStudySeriesIndex(
+                str_seriesInstanceUID
+            );
+            if(d_studySeries.status) {
+                d_toggle = this.studySeriesButton_toggleON(
+                                    'getInfo',
+                                    d_studySeries
+                            );
+            }   
+        }
     }
-    this.tprintf(l_termynal);    
 }
 
 /////////
@@ -2326,6 +2655,7 @@ function Page() {
     `;
 
     this.b_jsonSyntaxHighlight      = true;
+    this.b_anonDataMask             = false;
     document.onkeydown              = this.checkForArrowKeyPress;
 
     // Link to the REST object that works "in" the page. This object
@@ -2371,6 +2701,16 @@ function Page() {
         "Modality",
         "PerformedStationAETitle"
     ]
+
+    // DOM keys related to fields in the PACS Q/R that might
+    // needs be "anonymized" (and similarly parts of the 
+    // QUERY header text termynal display)
+    this.l_PACSQRanon   = [
+        "PatientID",
+        "PatientName",
+        "AccessionNumber"
+    ]
+
 
     // Concat the basic URL with the PACSQR since PACS fields can
     // be passed in the URL.
@@ -2641,6 +2981,47 @@ Page.prototype = {
            console.log('right arrow')
             page.rightArrow_process();
         }
+    },
+
+    anonDataMask_typeSet:               function(typeSpec) {
+        const str_help  = `
+            Set the type of various text input boxen in the main page
+            as either "password" or "text"
+
+        `;
+
+        const DOMANON               = new DOM(this.l_PACSQRanon);
+
+        for(DOMel of DOMANON.elements()) {
+            DOMANON.type_set(DOMel, typeSpec)
+        }
+    },
+
+    anonDataMask_toggle:                function() {
+        let debug           = new Debug("Page.anonDataMask_toggle");
+        debug.entering();
+        let ANON_dataButton_DOM = document.getElementById("ANON_status");
+        debug.vlog({
+                        message:    'before toggle: b_anonDataMask', 
+                        var:        this.b_anonDataMask
+                    });
+        this.b_anonDataMask = !this.b_anonDataMask;
+
+        debug.vlog({
+                        message:    'after  toggle: b_anonDataMask', 
+                        var:        this.b_anonDataMask
+                    });
+        if(this.b_anonDataMask) {
+            ANON_dataButton_DOM.innerHTML     = 'ANON mask: ON';
+            ANON_dataButton_DOM.className     = 'pure-button pure-button-primary button-jsonHighlight-on';
+            this.anonDataMask_typeSet('password');            
+        }
+        if(!this.b_anonDataMask) {
+            ANON_dataButton_DOM.innerHTML     = 'ANON mask: OFF';
+            ANON_dataButton_DOM.className     = 'pure-button pure-button-primary button-jsonHighlight-off';
+            this.anonDataMask_typeSet('text');            
+        }
+        debug.leaving();
     },
 
     jsonSyntaxHightlight_toggle:    function() {
