@@ -1706,6 +1706,49 @@ TERMynal.prototype = {
     },
 
     // TERMynal.prototype
+    study_statusFind:               function(d_args) {
+        let str_help = `
+
+            This method determines the status of an entire study
+            by examining the 'local' state of each series. Since the
+            state of a series is reflected by the current DOM button
+            being displayed, this method returns a summary of the
+            button states.
+
+            The primary purpose of this method is to be used in 
+            determining the corresponding state of the study 
+            button
+        `;
+        let studyIndex              = d_args.study;
+        let report                  = this.page.rest.msg.queryPFresponse.json_response.query.report.json[studyIndex];
+        let numSeries               = report.body.length;
+        let d_ret                   = {
+                                        'status':                   false,
+                                        'totalNumberOfSeries':      numSeries,
+                                        'buttonStates':             ['retrieve', 'getInFlightStatus', 'getInfo'],
+                                        'buttonStateCount': {
+                                            'retrieve':             0,
+                                            'getInFlightStatus':    0,
+                                            'getInfo':              0,     
+                                        },
+                                        'buttonStateUniform': {
+                                            'retrieve':             false,
+                                            'getInFlightStatus':    false,
+                                            'getInfo':              false
+                                        }
+                                    }
+        for(let series = 0; series < numSeries; series++ ) {
+            d_args.series    = series;
+            let str_buttonOn = this.page.PACSquery_TERMynal.studySeriesButton_whichStateIsOn(d_args);
+            d_ret.buttonStateCount[str_buttonOn]++;
+        }
+        for(str_state of d_ret.buttonStates) {
+            d_ret.buttonStateUniform[str_state] = d_ret.buttonStateCount[str_state] == d_ret.totalNumberOfSeries;
+        }
+        return d_ret;
+    },
+
+    // TERMynal.prototype
     studySeriesButton_whichStateIsOn:   function(d_args) {
         let str_help = `
 
@@ -2855,6 +2898,7 @@ function Page() {
 Page.prototype = {
     constructor:    Page,
 
+    // Page
     FAinputButton_create:               function(astr_functionClickName, 
                                                  astr_value, 
                                                  astr_fname, 
@@ -2869,11 +2913,13 @@ Page.prototype = {
         return(str_inputButton);
     },
 
+    // Page
     rightArrow_inputButtonCreate:       function() {
         return(this.FAinputButton_create("page.rightArrow_process()", 
                                          "f35a", "arrow-alt-circle-right"));
     },
 
+    // Page
     rightArrow_process:                 function() {
         let str_help = `
 
@@ -2890,11 +2936,13 @@ Page.prototype = {
         this.PACSquery_TERMynal.response_print(index);
     },
 
+    // Page
     leftArrow_inputButtonCreate:        function() {
         return(this.FAinputButton_create("page.leftArrow_process()",
                                          "f359", "arrow-alt-circle-left"));
     },
 
+    // Page
     leftArrow_process:                  function() {
         let str_help = `
 
@@ -2911,11 +2959,13 @@ Page.prototype = {
         this.PACSquery_TERMynal.response_print(index);
     },
 
+    // Page
     upArrow_inputButtonCreate:          function() {
         return(this.FAinputButton_create("page.upArrow_process()",
                                          "f35b", "arrow-alt-circle-up"));
     },
 
+    // Page
     upArrow_process:                    function() {
         let str_help = `
 
@@ -2929,11 +2979,13 @@ Page.prototype = {
         this.PACSquery_TERMynal.response_print(index);
     },
 
+    // Page
     downArrow_inputButtonCreate:        function() {
         return(this.FAinputButton_create("page.downArrow_process()",
                                          "f358", "arrow-alt-circle-down"));
     },
 
+    // Page
     downArrow_process:                  function() {
         let str_help = `
 
@@ -2947,6 +2999,7 @@ Page.prototype = {
         this.PACSquery_TERMynal.response_print(index);
     },
 
+    // Page
     checkForArrowKeyPress:          function(e) {
         let str_help = `
 
@@ -2983,6 +3036,7 @@ Page.prototype = {
         }
     },
 
+    // Page
     anonDataMask_typeSet:               function(typeSpec) {
         const str_help  = `
             Set the type of various text input boxen in the main page
@@ -2997,6 +3051,7 @@ Page.prototype = {
         }
     },
 
+    // Page
     anonDataMask_toggle:                function() {
         let debug           = new Debug("Page.anonDataMask_toggle");
         debug.entering();
@@ -3024,6 +3079,7 @@ Page.prototype = {
         debug.leaving();
     },
 
+    // Page
     jsonSyntaxHightlight_toggle:    function() {
         let debug           = new Debug("Page.jsonSyntaxHighlight_toggle");
         debug.entering();
@@ -3042,6 +3098,7 @@ Page.prototype = {
         debug.leaving();
     },
     
+    // Page
     fields_populateFromURL: function() {
         let str_help = `
             Populate various fields on the page from URL args
